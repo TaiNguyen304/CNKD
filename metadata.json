@@ -1,0 +1,6 @@
+{
+  "name": "Chiếc Nón Kỳ Diệu Game Show System",
+  "description": "Hệ thống 7 màn hình điều khiển và trình chiếu Chiếc Nón Kỳ Diệu gồm Controller, Host, Puzzleboard, Wheel và 3 màn hình người chơi Player 1-2-3 với Socket.IO thời gian thực.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

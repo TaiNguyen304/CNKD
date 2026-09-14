@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Người Chơi 1 - Chiếc Nón Kỳ Diệu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/disableDevTools.js"></script>
+  <style>
+    :root {
+      --blue: blue;
+      --aqua: aqua;
+      --yellow: yellow;
+      --green: green;
+      --red: red;
+      --pink: #ff00cc;
+      --purple: purple;
+      --lime: #39ff14;
+      --black: #000000;
+      --white: #ffffff;
+      --light-blue: aqua;
+      --dark-blue: blue;
+      --orange: orange;
+    }
+    * {
+      font-weight: bold !important;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      user-select: none;
+    }
+    button:hover:not(:disabled),
+    .btn-action:hover:not(:disabled),
+    .btn:hover:not(:disabled),
+    a:hover,
+    input[type="button"]:hover:not(:disabled),
+    input[type="submit"]:hover:not(:disabled),
+    [role="button"]:hover {
+      background: orange !important;
+      background-color: orange !important;
+      color: #000000 !important;
+      border-color: orange !important;
+    }
+    button:hover:not(:disabled) *,
+    .btn-action:hover:not(:disabled) *,
+    .btn:hover:not(:disabled) *,
+    a:hover * {
+      color: #000000 !important;
+    }
+    .buzzer-btn {
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      box-shadow: 0 10px 0 #991b1b, 0 14px 20px rgba(0,0,0,0.5);
+    }
+    .buzzer-btn:active {
+      transform: translateY(6px);
+      box-shadow: 0 4px 0 #991b1b, 0 6px 10px rgba(0,0,0,0.4);
+    }
+    .spin-btn {
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      box-shadow: 0 10px 0 #b45309, 0 14px 20px rgba(0,0,0,0.5);
+    }
+    .spin-btn:active {
+      transform: translateY(6px);
+      box-shadow: 0 4px 0 #b45309, 0 6px 10px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen w-screen overflow-hidden flex flex-col p-2 sm:p-3 gap-2">
+
+  <!-- ROW 1 (TOP): 2 COLUMNS -->
+  <!-- Top Left: Player Name (P1-Red) | Top Right: Row with 3 players (Name + Score) -->
+  <header class="h-14 flex-shrink-0 grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-slate-900/90 border border-red-500/40 rounded-xl px-3 py-2 shadow-lg">
+    <!-- Top Left: Player Name (Color-coded: Red for P1) -->
+    <div class="md:col-span-5 flex items-center gap-2.5 truncate">
+      <div class="w-8 h-8 rounded-lg bg-red-600 border border-red-400 flex items-center justify-center text-white text-base font-black shadow flex-shrink-0">
+        1
+      </div>
+      <div class="truncate">
+        <h1 class="text-base sm:text-lg font-black text-red-500 tracking-wide truncate" id="myPlayerName">
+          NGƯỜI CHƠI 1
+        </h1>
+        <span class="text-[10px] text-red-300 font-bold uppercase tracking-wider" id="myTurnBadge">Sẵn sàng</span>
+      </div>
+    </div>
+
+    <!-- Top Right: Row with 3 players (Name + Score) -->
+    <div class="md:col-span-7 flex items-center justify-end gap-2 sm:gap-3 text-xs">
+      <!-- P1: Default Purple -->
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-800 border border-purple-400/80 shadow text-white flex-shrink-0" id="topP1Card">
+        <span class="text-white font-black truncate max-w-[90px]" id="topP1Name">Người chơi 1</span>
+        <span class="text-white font-mono font-black text-sm" id="topP1Score">0</span>
+      </div>
+
+      <!-- P2: Default Purple -->
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-800 border border-purple-400/80 shadow text-white flex-shrink-0" id="topP2Card">
+        <span class="text-white font-black truncate max-w-[90px]" id="topP2Name">Người chơi 2</span>
+        <span class="text-white font-mono font-black text-sm" id="topP2Score">0</span>
+      </div>
+
+      <!-- P3: Default Purple -->
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-800 border border-purple-400/80 shadow text-white flex-shrink-0" id="topP3Card">
+        <span class="text-white font-black truncate max-w-[90px]" id="topP3Name">Người chơi 3</span>
+        <span class="text-white font-mono font-black text-sm" id="topP3Score">0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ROW 2: 2 COLUMNS -->
+  <!-- Row 2 Left: Puzzleboard.html view | Row 2 Right: Buzzer button -->
+  <section class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-2 sm:gap-3 overflow-hidden">
+    <!-- Row 2 Left: Puzzleboard.html view -->
+    <div class="md:col-span-8 h-full flex flex-col bg-slate-900/80 border border-slate-800 rounded-xl p-1.5 sm:p-2 shadow overflow-hidden">
+      <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-400 px-1 pb-1 flex-shrink-0">
+        <span class="flex items-center gap-1.5">Bảng Ô Chữ</span>
+        <span class="text-amber-300 text-[11px] font-mono" id="puzzleCategoryText">CHỦ ĐỀ</span>
+      </div>
+      <div class="flex-1 min-h-0 w-full h-full rounded-lg overflow-hidden bg-black border border-slate-800 relative">
+        <iframe src="/Puzzleboard.html" scrolling="no" class="w-full h-full border-0 pointer-events-none select-none block overflow-hidden" title="Puzzleboard Preview"></iframe>
+      </div>
+    </div>
+
+    <!-- Row 2 Right: NGUYÊN CẢ Ô LÀ NÚT BẤM CHUÔNG, CHỈ CÓ DUY NHẤT 1 CHỮ Chuông (Mặc định bị khóa khi mới vào/F5) -->
+    <button id="buzzerBtn" onclick="pressBuzzer()" disabled class="md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-500 bg-slate-800 border-4 border-slate-700 shadow-xl transition cursor-not-allowed select-none">
+      Chuông
+    </button>
+  </section>
+
+  <!-- ROW 3: 2 COLUMNS -->
+  <!-- Row 3 Left: Wheel.html view | Row 3 Right: Spin button -->
+  <section class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-2 sm:gap-3 overflow-hidden">
+    <!-- Row 3 Left: Wheel.html view -->
+    <div class="md:col-span-8 h-full flex flex-col bg-slate-900/80 border border-slate-800 rounded-xl p-1.5 sm:p-2 shadow overflow-hidden">
+      <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-400 px-1 pb-1 flex-shrink-0">
+        <span class="flex items-center gap-1.5">Chiếc Nón Kỳ Diệu</span>
+        <span class="text-slate-400 text-[11px]">Thời gian quay: 22s</span>
+      </div>
+      <div class="flex-1 min-h-0 w-full h-full rounded-lg overflow-hidden bg-black border border-slate-800 relative">
+        <iframe src="/Wheel.html?zoom=pointer" scrolling="no" class="w-full h-full border-0 pointer-events-none select-none block overflow-hidden" title="Wheel Preview"></iframe>
+      </div>
+    </div>
+
+    <!-- Row 3 Right: NGUYÊN CẢ Ô LÀ NÚT QUAY, CHỈ CÓ DUY NHẤT 1 CHỮ Quay -->
+    <button id="spinBtn" onclick="spinWheel()" disabled class="md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-500 bg-slate-800 border-4 border-slate-700 shadow-xl transition cursor-not-allowed select-none">
+      Quay
+    </button>
+  </section>
+
+  <script>
+    const PLAYER_ID = 1;
+    const socket = io();
+    let canSpin = false;
+    let buzzerEnabled = false;
+
+    socket.on('connect', () => {
+      socket.emit('state:request');
+    });
+
+    socket.on('game:state', (state) => {
+      updatePlayerUI(state);
+    });
+
+    // Nhận trực tiếp sự kiện mở quay từ Controller (phản hồi tức thì 1 chạm)
+    socket.on('player:spin_enabled', (data) => {
+      if (data && data.playerId === PLAYER_ID) {
+        canSpin = true;
+        const spinBtn = document.getElementById('spinBtn');
+        if (spinBtn) {
+          spinBtn.disabled = false;
+          spinBtn.innerText = 'Quay';
+          spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-950 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 border-4 border-yellow-200 shadow-2xl hover:brightness-110 active:scale-[0.98] transition cursor-pointer select-none';
+        }
+      } else {
+        canSpin = false;
+        const spinBtn = document.getElementById('spinBtn');
+        if (spinBtn) {
+          spinBtn.disabled = true;
+          spinBtn.innerText = 'Quay';
+          spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-500 bg-slate-800 border-4 border-slate-700 shadow-xl transition cursor-not-allowed select-none';
+        }
+      }
+    });
+
+    socket.on('player:spin_disabled', () => {
+      canSpin = false;
+      const spinBtn = document.getElementById('spinBtn');
+      if (spinBtn) {
+        spinBtn.disabled = true;
+        spinBtn.innerText = 'Quay';
+        spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-500 bg-slate-800 border-4 border-slate-700 shadow-xl transition cursor-not-allowed select-none';
+      }
+    });
+
+    socket.on('wheel:start_spin', () => {
+      canSpin = false;
+      const spinBtn = document.getElementById('spinBtn');
+      if (spinBtn) {
+        spinBtn.disabled = true;
+        spinBtn.innerText = 'Quay';
+        spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-amber-100 bg-gradient-to-br from-amber-600 to-yellow-700 border-4 border-amber-400 shadow-2xl cursor-wait select-none';
+      }
+    });
+
+    // Tự động đồng bộ trạng thái mới nhất ngay khi F5 / Reload / Vào muộn
+    fetch('/api/state')
+      .then(res => res.json())
+      .then(state => {
+        if (state) updatePlayerUI(state);
+      })
+      .catch(() => {});
+
+    function updatePlayerUI(state) {
+      if (!state) return;
+
+      const myPlayer = state.players.find(p => p.id === PLAYER_ID);
+      if (myPlayer) {
+        document.getElementById('myPlayerName').innerText = (myPlayer.name || 'NGƯỜI CHƠI 1').toUpperCase();
+        
+        // Spin permission
+        canSpin = Boolean(myPlayer.canSpin) && !state.wheel.spinning;
+        const spinBtn = document.getElementById('spinBtn');
+
+        if (spinBtn) {
+          spinBtn.innerText = 'Quay';
+          if (state.wheel.spinning) {
+            spinBtn.disabled = true;
+            spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-amber-100 bg-gradient-to-br from-amber-600 to-yellow-700 border-4 border-amber-400 shadow-2xl cursor-wait select-none';
+          } else if (canSpin) {
+            spinBtn.disabled = false;
+            spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-950 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 border-4 border-yellow-200 shadow-2xl hover:brightness-110 active:scale-[0.98] transition cursor-pointer select-none';
+          } else {
+            spinBtn.disabled = true;
+            spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-500 bg-slate-800 border-4 border-slate-700 shadow-xl transition cursor-not-allowed select-none';
+          }
+        }
+      }
+
+      // Top Right: 3 Players row (3 ô điểm default màu tím, chữ đậm trắng; khi bấm chuông đổi màu: P1 Đỏ, P2 Vàng, P3 Xanh)
+      const buzzedWinner = (state.buzzer && state.buzzer.winner) ? state.buzzer.winner : null;
+
+      // Card 1
+      const p1Card = document.getElementById('topP1Card');
+      const p1NameEl = document.getElementById('topP1Name');
+      const p1ScoreEl = document.getElementById('topP1Score');
+      const p1 = state.players.find(p => p.id === 1);
+      if (p1NameEl && p1) p1NameEl.innerText = p1.name || 'Người chơi 1';
+      if (p1ScoreEl && p1) p1ScoreEl.innerText = Number(p1.roundScore || 0).toLocaleString('vi-VN');
+
+      if (buzzedWinner === 1 || (p1 && p1.buzzed)) {
+        // Player 1: Đỏ
+        if (p1Card) p1Card.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600 border-2 border-red-300 shadow-lg shadow-red-600/50 text-white flex-shrink-0 animate-pulse';
+        if (p1NameEl) p1NameEl.className = 'text-white font-black truncate max-w-[90px]';
+        if (p1ScoreEl) p1ScoreEl.className = 'text-white font-mono font-black text-sm';
+      } else {
+        // Default: Màu tím, chữ đậm trắng
+        if (p1Card) p1Card.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-800 border border-purple-400/80 shadow text-white flex-shrink-0';
+        if (p1NameEl) p1NameEl.className = 'text-white font-black truncate max-w-[90px]';
+        if (p1ScoreEl) p1ScoreEl.className = 'text-white font-mono font-black text-sm';
+      }
+
+      // Card 2
+      const p2Card = document.getElementById('topP2Card');
+      const p2NameEl = document.getElementById('topP2Name');
+      const p2ScoreEl = document.getElementById('topP2Score');
+      const p2 = state.players.find(p => p.id === 2);
+      if (p2NameEl && p2) p2NameEl.innerText = p2.name || 'Người chơi 2';
+      if (p2ScoreEl && p2) p2ScoreEl.innerText = Number(p2.roundScore || 0).toLocaleString('vi-VN');
+
+      if (buzzedWinner === 2 || (p2 && p2.buzzed)) {
+        // Player 2: Vàng
+        if (p2Card) p2Card.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-400 border-2 border-yellow-200 shadow-lg shadow-yellow-400/50 text-slate-950 flex-shrink-0 animate-pulse';
+        if (p2NameEl) p2NameEl.className = 'text-slate-950 font-black truncate max-w-[90px]';
+        if (p2ScoreEl) p2ScoreEl.className = 'text-slate-950 font-mono font-black text-sm';
+      } else {
+        // Default: Màu tím, chữ đậm trắng
+        if (p2Card) p2Card.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-800 border border-purple-400/80 shadow text-white flex-shrink-0';
+        if (p2NameEl) p2NameEl.className = 'text-white font-black truncate max-w-[90px]';
+        if (p2ScoreEl) p2ScoreEl.className = 'text-white font-mono font-black text-sm';
+      }
+
+      // Card 3
+      const p3Card = document.getElementById('topP3Card');
+      const p3NameEl = document.getElementById('topP3Name');
+      const p3ScoreEl = document.getElementById('topP3Score');
+      const p3 = state.players.find(p => p.id === 3);
+      if (p3NameEl && p3) p3NameEl.innerText = p3.name || 'Người chơi 3';
+      if (p3ScoreEl && p3) p3ScoreEl.innerText = Number(p3.roundScore || 0).toLocaleString('vi-VN');
+
+      if (buzzedWinner === 3 || (p3 && p3.buzzed)) {
+        // Player 3: Xanh
+        if (p3Card) p3Card.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 border-2 border-blue-300 shadow-lg shadow-blue-600/50 text-white flex-shrink-0 animate-pulse';
+        if (p3NameEl) p3NameEl.className = 'text-white font-black truncate max-w-[90px]';
+        if (p3ScoreEl) p3ScoreEl.className = 'text-white font-mono font-black text-sm';
+      } else {
+        // Default: Màu tím, chữ đậm trắng
+        if (p3Card) p3Card.className = 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-800 border border-purple-400/80 shadow text-white flex-shrink-0';
+        if (p3NameEl) p3NameEl.className = 'text-white font-black truncate max-w-[90px]';
+        if (p3ScoreEl) p3ScoreEl.className = 'text-white font-mono font-black text-sm';
+      }
+
+      // Category
+      const catEl = document.getElementById('puzzleCategoryText');
+      if (catEl) catEl.innerText = state.puzzle.category || 'CHỦ ĐỀ';
+
+      // Buzzer state
+      buzzerEnabled = Boolean(state.buzzer && state.buzzer.enabled && !state.buzzer.winner);
+      const buzzerBtn = document.getElementById('buzzerBtn');
+
+      if (buzzerBtn) {
+        buzzerBtn.innerText = 'Chuông';
+        if (state.buzzer && state.buzzer.winner === PLAYER_ID) {
+          buzzerBtn.disabled = true;
+          buzzerBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-white bg-gradient-to-br from-emerald-500 to-teal-700 border-4 border-emerald-300 shadow-2xl cursor-default select-none';
+        } else if (state.buzzer && state.buzzer.winner) {
+          buzzerBtn.disabled = true;
+          buzzerBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-500 bg-slate-800 border-4 border-slate-700 shadow-xl transition cursor-not-allowed select-none';
+        } else if (buzzerEnabled) {
+          buzzerBtn.disabled = false;
+          buzzerBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-white bg-gradient-to-br from-red-500 via-rose-600 to-red-700 border-4 border-yellow-300 shadow-2xl hover:brightness-110 active:scale-[0.98] transition cursor-pointer select-none';
+        } else {
+          buzzerBtn.disabled = true;
+          buzzerBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-500 bg-slate-800 border-4 border-slate-700 shadow-xl transition cursor-not-allowed select-none';
+        }
+      }
+    }
+
+    function pressBuzzer() {
+      if (!buzzerEnabled) return;
+      socket.emit('buzzer:press', PLAYER_ID);
+    }
+
+    function spinWheel() {
+      if (!canSpin) return;
+      socket.emit('wheel:spin', { spinner: `player${PLAYER_ID}`, duration: 22000 });
+    }
+
+    // Spacebar listener for tactile buzzer
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        pressBuzzer();
+      }
+    });
+  </script>
+</body>
+</html>

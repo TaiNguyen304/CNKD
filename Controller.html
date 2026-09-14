@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bàn Điều Khiển - Chiếc Nón Kỳ Diệu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="/disableDevTools.js"></script>
+  <style>
+    :root {
+      --blue: blue;
+      --aqua: aqua;
+      --yellow: yellow;
+      --green: green;
+      --red: red;
+      --pink: #ff00cc;
+      --purple: purple;
+      --lime: #39ff14;
+      --black: #000000;
+      --white: #ffffff;
+      --light-blue: aqua;
+      --dark-blue: blue;
+      --orange: orange;
+    }
+    * {
+      font-weight: bold !important;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    button:hover:not(:disabled),
+    .btn-action:hover:not(:disabled),
+    .btn:hover:not(:disabled),
+    a:hover,
+    input[type="button"]:hover:not(:disabled),
+    input[type="submit"]:hover:not(:disabled),
+    label.btn-action:hover {
+      background: orange !important;
+      background-color: orange !important;
+      color: #000000 !important;
+      border-color: orange !important;
+    }
+    button:hover:not(:disabled) *,
+    .btn-action:hover:not(:disabled) *,
+    .btn:hover:not(:disabled) *,
+    a:hover * {
+      color: #000000 !important;
+    }
+    .btn-action {
+      transition: all 0.15s ease;
+    }
+    .btn-action:active {
+      transform: scale(0.96);
+    }
+    /* Custom Toast Animation */
+    .toast-enter {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+    .toast-visible {
+      transform: translateY(0);
+      opacity: 1;
+      transition: all 0.25s ease-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-3 sm:p-5 pb-24">
+
+  <!-- In-app Toast Notification Container (Zero alerts) -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-md w-full"></div>
+
+  <!-- Custom Confirmation Modal (Zero confirms) -->
+  <div id="customConfirmModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border-2 border-rose-500/60 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center space-y-4">
+      <div class="w-14 h-14 rounded-full bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center text-2xl font-black">
+        !
+      </div>
+      <h3 class="text-lg font-black text-white" id="confirmModalTitle">XÁC NHẬN HÀNH ĐỘNG</h3>
+      <p class="text-xs text-slate-300" id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+      <div class="flex gap-3 justify-center pt-2">
+        <button onclick="closeConfirmModal(false)" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700">
+          Hủy bỏ
+        </button>
+        <button id="confirmModalOkBtn" class="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-lg shadow-rose-900/30">
+          Đồng ý
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP VÒNG 1-4 & VÒNG ĐẶC BIỆT: Ô chữ cố định hay chọn 1 trong 3 chủ đề -->
+  <div id="roundSelectionModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border-2 border-amber-500/70 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-slate-950 text-2xl shadow-lg">
+            ⭐
+          </div>
+          <div>
+            <h2 class="text-xl sm:text-2xl font-black text-white" id="modalRoundName">BẮT ĐẦU VÒNG CHƠI</h2>
+            <p class="text-xs text-amber-300/80">Lựa chọn phương thức mở ô chữ trên sân khấu</p>
+          </div>
+        </div>
+        <button onclick="closeRoundSelectionModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold">
+          X
+        </button>
+      </div>
+
+      <!-- State 1: 2 Main Buttons (Ô chữ cố định VS Chọn 1 trong 3 chủ đề) -->
+      <div id="modalStep1Options" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Nút 1: Ô chữ cố định -->
+        <button onclick="handleSelectFixedPuzzle()" class="p-5 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-blue-500/50 hover:border-blue-400 hover:bg-slate-800 text-left transition-all duration-200 group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-base font-black mb-3 group-hover:scale-110 transition">
+              1
+            </div>
+            <h3 class="text-base font-black text-white group-hover:text-blue-300">Ô CHỮ CỐ ĐỊNH</h3>
+            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+              Mở trực tiếp ô chữ cố định của vòng này. Ô chữ trống sẽ lập tức hiện ra trên Puzzleboard.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-blue-400 flex items-center gap-1.5">
+            <span>Chọn Ô Chữ Cố Định</span>
+          </div>
+        </button>
+
+        <!-- Nút 2: Chọn 1 trong 3 chủ đề -->
+        <button onclick="handleStartTopicSelectionStep()" class="p-5 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-amber-500/50 hover:border-amber-400 hover:bg-slate-800 text-left transition-all duration-200 group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-base font-black mb-3 group-hover:scale-110 transition">
+              3
+            </div>
+            <h3 class="text-base font-black text-white group-hover:text-amber-300">CHỌN 1 TRONG 3 CHỦ ĐỀ</h3>
+            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+              Xuất hiện 3 chủ đề cho người chơi chọn. Sau khi người chơi chọn xong, ô chữ mới hiện ra.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-amber-400 flex items-center gap-1.5">
+            <span>Chọn 1 trong 3 chủ đề</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- State 2: Display 3 Topics to Choose (Ô chữ chỉ hiện ra sau khi chọn chủ đề) -->
+      <div id="modalStep2Topics" class="hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-amber-300 uppercase tracking-wider font-extrabold">
+            BẤM CHỌN 1 TRONG 3 CHỦ ĐỀ ĐỂ MỞ Ô CHỮ:
+          </span>
+          <button onclick="backToModalStep1()" class="text-xs text-slate-400 hover:text-white underline">
+            Quay lại
+          </button>
+        </div>
+
+        <div id="topicsContainer" class="space-y-3">
+          <!-- Dynamically populated 3 topics -->
+        </div>
+
+        <p class="text-[11px] text-slate-400 text-center italic">
+          * Theo quy tắc: Khi bấm chọn một trong ba chủ đề trên, ô chữ trống của chủ đề đó mới chính thức xuất hiện trên sân khấu.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="max-w-7xl mx-auto mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div class="flex items-center gap-3">
+      <div>
+        <h1 class="text-xl md:text-2xl font-black text-white tracking-wide flex items-center gap-2">
+          CONTROLLER <span class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">BÀN ĐIỀU KHIỂN TRUNG TÂM</span>
+        </h1>
+        <p class="text-xs text-slate-400">Chiếc Nón Kỳ Diệu - 7 Màn hình thời gian thực</p>
+      </div>
+    </div>
+
+    <!-- Quick Links & Status -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <div id="connectionStatus" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Đã kết nối</span>
+      </div>
+
+      <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-lg text-xs">
+        <a href="/Host.html" target="_blank" class="px-2.5 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition">Host</a>
+        <a href="/Puzzleboard.html" target="_blank" class="px-2.5 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition">Ô Chữ</a>
+        <a href="/Wheel.html" target="_blank" class="px-2.5 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition">Nón</a>
+        <a href="/Player1.html" target="_blank" class="px-2 py-1 rounded hover:bg-red-500/20 text-red-300">P1</a>
+        <a href="/Player2.html" target="_blank" class="px-2 py-1 rounded hover:bg-emerald-500/20 text-emerald-300">P2</a>
+        <a href="/Player3.html" target="_blank" class="px-2 py-1 rounded hover:bg-blue-500/20 text-blue-300">P3</a>
+      </div>
+
+      <button onclick="toggleSound()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs">
+        Âm thanh
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto space-y-5">
+
+    <!-- PHẦN 1: QUẢN LÝ 3 HÀNG NGƯỜI CHƠI THEO ĐÚNG YÊU CẦU -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+        <h2 class="text-sm sm:text-base font-bold text-slate-200 flex items-center gap-2">
+          BẢNG ĐIỀU KHIỂN ĐIỂM SỐ 3 NGƯỜI CHƠI (3 HÀNG)
+        </h2>
+        <span class="text-xs text-slate-400">Mỗi hàng: Tên, Điểm vòng, Set, +, -, Reset vòng, x2, /2, Điểm tổng, Set điểm tổng, Thêm vào điểm tổng</span>
+      </div>
+
+      <div class="space-y-3.5">
+        <!-- Hàng 1: Player 1 (Màu đỏ) -->
+        <div id="playerRow1" class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-red-500/30 shadow-sm flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
+          <div class="flex items-center justify-between xl:w-52 shrink-0 border-b xl:border-b-0 xl:border-r border-slate-800 pb-2 xl:pb-0 xl:pr-3">
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-3.5 rounded-full bg-red-500"></span>
+              <span class="font-bold text-red-400 text-sm" id="p1_badgeName">Người chơi 1</span>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-slate-400">Vòng: <span class="font-black text-amber-300 text-base" id="p1_dispRound">0</span></div>
+              <div class="text-[11px] text-slate-500">Tổng: <span class="font-bold text-white" id="p1_dispTotal">0</span></div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 flex-grow">
+            <!-- 1 textbox nhập tên -->
+            <input type="text" id="p1_nameInput" placeholder="Tên P1" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
+            <!-- 1 textbox nhập điểm -->
+            <input type="number" id="p1_scoreInput" placeholder="Điểm vòng" class="w-24 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-amber-300 font-mono focus:outline-none">
+            <!-- 1 nút Set để set tên và điểm vòng -->
+            <button onclick="setPlayer(1)" class="btn-action px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-semibold shadow">Set</button>
+            <!-- 1 nút + để cộng số điểm đã nhập vào điểm vòng -->
+            <button onclick="addRoundScore(1)" class="btn-action px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold shadow" title="Cộng vào điểm vòng">+</button>
+            <!-- 1 nút - để trừ khỏi điểm vòng -->
+            <button onclick="subtractRoundScore(1)" class="btn-action px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded-lg text-xs font-bold shadow" title="Trừ khỏi điểm vòng">-</button>
+            <!-- Reset vòng để reset điểm vòng về 0 -->
+            <button onclick="resetRoundScore(1)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs border border-slate-700">Reset vòng</button>
+            <!-- 1 nút x2 để nhân đôi điểm vòng -->
+            <button onclick="multiplyRoundScore(1, 2)" class="btn-action px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold">x2</button>
+            <!-- /2 để chia đôi điểm vòng -->
+            <button onclick="multiplyRoundScore(1, 0.5)" class="btn-action px-2.5 py-1.5 bg-amber-800 hover:bg-amber-700 text-amber-200 rounded-lg text-xs font-bold">/2</button>
+            <!-- 1 textbox để nhập điểm tổng -->
+            <input type="number" id="p1_totalInput" placeholder="Điểm tổng" class="w-28 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-emerald-300 font-mono focus:outline-none">
+            <!-- 1 nút set điểm tổng để set điểm tổng theo số đã nhập -->
+            <button onclick="setTotalScore(1)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs">Set điểm tổng</button>
+            <!-- 1 nút thêm vào điểm tổng để thêm điểm vòng vào tổng -->
+            <button onclick="addRoundToTotal(1)" class="btn-action px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow">Thêm vào điểm tổng</button>
+          </div>
+        </div>
+
+        <!-- Hàng 2: Player 2 (Màu xanh lục) -->
+        <div id="playerRow2" class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-emerald-500/30 shadow-sm flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
+          <div class="flex items-center justify-between xl:w-52 shrink-0 border-b xl:border-b-0 xl:border-r border-slate-800 pb-2 xl:pb-0 xl:pr-3">
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-3.5 rounded-full bg-emerald-500"></span>
+              <span class="font-bold text-emerald-400 text-sm" id="p2_badgeName">Người chơi 2</span>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-slate-400">Vòng: <span class="font-black text-amber-300 text-base" id="p2_dispRound">0</span></div>
+              <div class="text-[11px] text-slate-500">Tổng: <span class="font-bold text-white" id="p2_dispTotal">0</span></div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 flex-grow">
+            <input type="text" id="p2_nameInput" placeholder="Tên P2" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
+            <input type="number" id="p2_scoreInput" placeholder="Điểm vòng" class="w-24 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-amber-300 font-mono focus:outline-none">
+            <button onclick="setPlayer(2)" class="btn-action px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow">Set</button>
+            <button onclick="addRoundScore(2)" class="btn-action px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold shadow" title="Cộng vào điểm vòng">+</button>
+            <button onclick="subtractRoundScore(2)" class="btn-action px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded-lg text-xs font-bold shadow" title="Trừ khỏi điểm vòng">-</button>
+            <button onclick="resetRoundScore(2)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs border border-slate-700">Reset vòng</button>
+            <button onclick="multiplyRoundScore(2, 2)" class="btn-action px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold">x2</button>
+            <button onclick="multiplyRoundScore(2, 0.5)" class="btn-action px-2.5 py-1.5 bg-amber-800 hover:bg-amber-700 text-amber-200 rounded-lg text-xs font-bold">/2</button>
+            <input type="number" id="p2_totalInput" placeholder="Điểm tổng" class="w-28 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-emerald-300 font-mono focus:outline-none">
+            <button onclick="setTotalScore(2)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs">Set điểm tổng</button>
+            <button onclick="addRoundToTotal(2)" class="btn-action px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow">Thêm vào điểm tổng</button>
+          </div>
+        </div>
+
+        <!-- Hàng 3: Player 3 (Màu xanh dương) -->
+        <div id="playerRow3" class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-blue-500/30 shadow-sm flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
+          <div class="flex items-center justify-between xl:w-52 shrink-0 border-b xl:border-b-0 xl:border-r border-slate-800 pb-2 xl:pb-0 xl:pr-3">
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-3.5 rounded-full bg-blue-500"></span>
+              <span class="font-bold text-blue-400 text-sm" id="p3_badgeName">Người chơi 3</span>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-slate-400">Vòng: <span class="font-black text-amber-300 text-base" id="p3_dispRound">0</span></div>
+              <div class="text-[11px] text-slate-500">Tổng: <span class="font-bold text-white" id="p3_dispTotal">0</span></div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 flex-grow">
+            <input type="text" id="p3_nameInput" placeholder="Tên P3" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
+            <input type="number" id="p3_scoreInput" placeholder="Điểm vòng" class="w-24 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-amber-300 font-mono focus:outline-none">
+            <button onclick="setPlayer(3)" class="btn-action px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow">Set</button>
+            <button onclick="addRoundScore(3)" class="btn-action px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold shadow" title="Cộng vào điểm vòng">+</button>
+            <button onclick="subtractRoundScore(3)" class="btn-action px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded-lg text-xs font-bold shadow" title="Trừ khỏi điểm vòng">-</button>
+            <button onclick="resetRoundScore(3)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs border border-slate-700">Reset vòng</button>
+            <button onclick="multiplyRoundScore(3, 2)" class="btn-action px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold">x2</button>
+            <button onclick="multiplyRoundScore(3, 0.5)" class="btn-action px-2.5 py-1.5 bg-amber-800 hover:bg-amber-700 text-amber-200 rounded-lg text-xs font-bold">/2</button>
+            <input type="number" id="p3_totalInput" placeholder="Điểm tổng" class="w-28 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-emerald-300 font-mono focus:outline-none">
+            <button onclick="setTotalScore(3)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs">Set điểm tổng</button>
+            <button onclick="addRoundToTotal(3)" class="btn-action px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow">Thêm vào điểm tổng</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PHẦN 2: NHẬP ĐỀ TỪ FILE EXCEL (TƯƠNG THÍCH PUZZLE.XLSX) -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm sm:text-base font-bold text-slate-200">NHẬP ĐỀ TỪ FILE EXCEL (PUZZLE.XLSX)</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- 1 nút nhập đề để nhập đề từ file Excel -->
+          <label for="excelFileInput" class="btn-action cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-900/20">
+            <span>Nhập đề từ Excel</span>
+          </label>
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleExcelImport(event)">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Ô chữ hiện tại trên sóng -->
+        <div class="lg:col-span-2 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ô chữ đang phát sóng</h3>
+            <span id="currentRoundBadgeInCard" class="text-xs text-amber-400 px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Chủ đề (Category)</label>
+              <input type="text" id="puzzleCategoryInput" placeholder="DANH LAM THẮNG CẢNH" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-amber-300 font-bold focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">Gợi ý của MC (Clue)</label>
+              <input type="text" id="puzzleClueInput" placeholder="Gợi ý câu hỏi..." class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none">
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <div class="flex-grow">
+              <label class="block text-[11px] text-slate-400 mb-1">Đáp án ô chữ (Answer)</label>
+              <input type="text" id="puzzleAnswerInput" placeholder="VỊNH HẠ LONG" class="w-full px-3 py-2 bg-slate-900 border border-indigo-500/50 rounded-lg text-sm text-white font-black tracking-wider uppercase focus:outline-none">
+            </div>
+            <div class="flex items-end">
+              <button onclick="applyManualPuzzle()" class="btn-action px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow h-[38px] whitespace-nowrap">
+                Áp dụng
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thông tin đề thi theo các sheet đã nạp -->
+        <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Trạng thái đề thi đã nạp</h3>
+            <div id="importedRoundsList" class="space-y-1.5 max-h-32 overflow-y-auto text-xs text-slate-300 pr-1">
+              <!-- Loaded sheet summaries -->
+            </div>
+          </div>
+          <div class="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+            <span>Tổng số vòng: <strong class="text-white" id="totalRoundsCount">0</strong></span>
+            <span class="text-emerald-400">Đã đồng bộ</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PHẦN 3: VÒNG CHƠI (CÁC NÚT VÒNG CHƠI) -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm sm:text-base font-bold text-slate-200">MỤC VÒNG CHƠI</h2>
+        </div>
+        <div class="text-xs">
+          Vòng hiện tại: <span id="currentRoundDisplay" class="font-extrabold text-amber-400 text-sm px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
+        </div>
+      </div>
+
+      <!-- Các nút vòng chơi: Đoán nhanh 1, Đoán nhanh 2, Vòng 1, Vòng 2, Vòng 3, Đoán nhanh 3, ĐNLH 1, ĐNLH 2, ĐNLH 3, Vòng 4, Vòng khán giả, Vòng đặc biệt -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+        <button onclick="triggerRoundClick('Đoán nhanh 1')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          Đoán nhanh 1
+        </button>
+        <button onclick="triggerRoundClick('Đoán nhanh 2')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          Đoán nhanh 2
+        </button>
+        <!-- Vòng 1 (Có popup 2 nút) -->
+        <button onclick="triggerRoundClick('Vòng 1')" class="round-btn btn-action py-2.5 px-3 bg-indigo-600 border border-indigo-400 text-white rounded-xl text-xs font-bold text-center relative group">
+          <span>Vòng 1</span>
+          <span class="text-[10px] block opacity-75 font-normal">Popup lựa chọn</span>
+        </button>
+        <!-- Vòng 2 (Có popup 2 nút) -->
+        <button onclick="triggerRoundClick('Vòng 2')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          <span>Vòng 2</span>
+          <span class="text-[10px] block opacity-75 font-normal">Popup lựa chọn</span>
+        </button>
+        <!-- Vòng 3 (Có popup 2 nút) -->
+        <button onclick="triggerRoundClick('Vòng 3')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          <span>Vòng 3</span>
+          <span class="text-[10px] block opacity-75 font-normal">Popup lựa chọn</span>
+        </button>
+        <button onclick="triggerRoundClick('Đoán nhanh 3')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          Đoán nhanh 3
+        </button>
+        <button onclick="triggerRoundClick('ĐNLH 1')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          ĐNLH 1
+        </button>
+        <button onclick="triggerRoundClick('ĐNLH 2')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          ĐNLH 2
+        </button>
+        <button onclick="triggerRoundClick('ĐNLH 3')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          ĐNLH 3
+        </button>
+        <!-- Vòng 4 (Có popup 2 nút) -->
+        <button onclick="triggerRoundClick('Vòng 4')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          <span>Vòng 4</span>
+          <span class="text-[10px] block opacity-75 font-normal">Popup lựa chọn</span>
+        </button>
+        <button onclick="triggerRoundClick('Vòng khán giả')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
+          Vòng khán giả
+        </button>
+        <!-- Vòng đặc biệt (Có popup 2 nút) -->
+        <button onclick="triggerRoundClick('Vòng đặc biệt')" class="round-btn btn-action py-2.5 px-3 bg-gradient-to-r from-amber-600 to-yellow-500 border border-yellow-400 text-white rounded-xl text-xs font-extrabold text-center shadow-lg shadow-amber-900/30">
+          <span>Vòng đặc biệt</span>
+          <span class="text-[10px] block opacity-85 font-normal">Popup lựa chọn</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PHẦN 4: ĐIỀU KHIỂN Ô CHỮ (PUZZLEBOARD CONTROLS) -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm sm:text-base font-bold text-slate-200">ĐIỀU KHIỂN Ô CHỮ TRÊN SÂN KHẤU</h2>
+        </div>
+        <div class="text-xs text-slate-400" id="puzzleBoardStatusText">
+          Trạng thái bảng: <span class="font-bold text-amber-300" id="boardStateLabel">Chưa hiển thị</span>
+        </div>
+      </div>
+
+      <!-- Các nút Ô Chữ theo đúng yêu cầu: Hiện ô chữ, Giải ô chữ, Reset bảng trống, Bắt đầu hiện chữ, dừng hiện chữ, tiếp tục hiện chữ -->
+      <div class="flex flex-wrap items-center gap-2.5 mb-4">
+        <button onclick="puzzleAction('show')" class="btn-action px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow">
+          Hiện ô chữ
+        </button>
+        <button onclick="puzzleAction('solve')" class="btn-action px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow">
+          Giải ô chữ
+        </button>
+        <button onclick="puzzleAction('reset')" class="btn-action px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-bold">
+          Reset bảng trống
+        </button>
+        <button onclick="puzzleAction('start_reveal')" class="btn-action px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold shadow">
+          Bắt đầu hiện chữ
+        </button>
+        <button onclick="puzzleAction('stop_reveal')" class="btn-action px-4 py-2 bg-rose-700 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow">
+          Dừng hiện chữ
+        </button>
+        <button onclick="puzzleAction('resume_reveal')" class="btn-action px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-xl text-xs font-bold shadow">
+          Tiếp tục hiện chữ
+        </button>
+
+        <!-- 2 NÚT MỚI: Ẩn/Hiện thanh chủ đề & Ẩn/Hiện câu hỏi -->
+        <button id="btnToggleCategory" onclick="toggleCategoryVisibility()" class="btn-action px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5">
+          <span>Chủ đề: <span id="categoryStatusLabel">Hiện</span></span>
+        </button>
+        <button id="btnToggleClue" onclick="toggleClueVisibility()" class="btn-action px-4 py-2 bg-teal-700 hover:bg-teal-600 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5">
+          <span>Câu hỏi: <span id="clueStatusLabel">Hiện</span></span>
+        </button>
+      </div>
+
+      <!-- MÀU VIỀN Ô CHỮ (Gồm 6 màu: Tím #800080, Đỏ #ff0000, Vàng #ffff00, Xanh #0000ff, Xanh lá #00ff00, Trắng #ffffff) -->
+      <div class="p-3 sm:p-4 rounded-xl bg-slate-950/60 border border-slate-800 mb-4 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">MÀU VIỀN Ô CHỮ:</span>
+            <span class="text-xs font-black px-2 py-0.5 rounded border" id="currentBorderColorBadge" style="color: #c084fc; border-color: #800080; background: rgba(128,0,128,0.2);">
+              Tím (800080)
+            </span>
+          </div>
+          <span class="text-[11px] text-slate-400">Khung màu tím mặc định cho puzzleboard</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+          <!-- Tím (800080) -->
+          <button onclick="setPuzzleBorderColor('#800080')" class="btn-action py-2 px-3 bg-purple-950 hover:bg-purple-900 text-purple-200 border-2 border-purple-500 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #800080; border: 1.5px solid #c084fc;"></span>
+            <span>Tím (800080)</span>
+          </button>
+          <!-- Đỏ (ff0000) -->
+          <button onclick="setPuzzleBorderColor('#ff0000')" class="btn-action py-2 px-3 bg-red-950 hover:bg-red-900 text-red-200 border-2 border-red-500 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #ff0000; border: 1.5px solid #f87171;"></span>
+            <span>Đỏ (ff0000)</span>
+          </button>
+          <!-- Vàng (ffff00) -->
+          <button onclick="setPuzzleBorderColor('#ffff00')" class="btn-action py-2 px-3 bg-yellow-950 hover:bg-yellow-900 text-yellow-300 border-2 border-yellow-400 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #ffff00; border: 1.5px solid #fef08a;"></span>
+            <span>Vàng (ffff00)</span>
+          </button>
+          <!-- Xanh (0000ff) -->
+          <button onclick="setPuzzleBorderColor('#0000ff')" class="btn-action py-2 px-3 bg-blue-950 hover:bg-blue-900 text-blue-200 border-2 border-blue-500 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #0000ff; border: 1.5px solid #60a5fa;"></span>
+            <span>Xanh (0000ff)</span>
+          </button>
+          <!-- Xanh lá (00ff00) -->
+          <button onclick="setPuzzleBorderColor('#00ff00')" class="btn-action py-2 px-3 bg-emerald-950 hover:bg-emerald-900 text-emerald-200 border-2 border-green-400 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #00ff00; border: 1.5px solid #86efac;"></span>
+            <span>Xanh lá (00ff00)</span>
+          </button>
+          <!-- Trắng (ffffff) -->
+          <button onclick="setPuzzleBorderColor('#ffffff')" class="btn-action py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-200 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #ffffff; border: 1.5px solid #cbd5e1;"></span>
+            <span>Trắng (ffffff)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bảng Chữ Cái & Dò Chữ (Letter Detection, Mở lần 1 & Mở lần 2) -->
+      <div class="p-3 sm:p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Dò chữ cái:</span>
+            <div id="checkResultBadge" class="px-3.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs font-bold text-amber-300">
+              Chưa chọn chữ (Nhấn một chữ cái bên dưới để dò)
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <!-- Nút Mở lần 1 (Đánh dấu) -->
+            <button onclick="openStep1Mark()" id="btnStep1Mark" class="btn-action px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg">
+              Mở lần 1 (Đánh dấu)
+            </button>
+            <!-- Nút Mở lần 2 (Mở chữ) -->
+            <button onclick="openStep2Reveal()" id="btnStep2Reveal" class="btn-action px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg">
+              Mở lần 2 (Mở chữ)
+            </button>
+            <button onclick="clearMarkedLetters()" class="btn-action px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700" title="Xóa đánh dấu">
+              Xóa đánh dấu
+            </button>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-1.5" id="alphabetKeyboard">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- PHẦN 5: CHỌN NÓN & ĐIỀU KHIỂN NÓN (WHEEL SELECTION & CONTROLS) -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm sm:text-base font-bold text-slate-200">CHỌN NÓN & ĐIỀU KHIỂN NÓN (THỜI GIAN QUAY 22S)</h2>
+        </div>
+        <div class="text-xs text-slate-400">
+          Nón đang dùng: <span class="font-extrabold text-amber-400 text-sm px-2.5 py-0.5 rounded bg-amber-400/10 border border-amber-400/30" id="currentSelectedWheelBadge">Nón 1 (vong7.png)</span>
+        </div>
+      </div>
+
+      <!-- MỤC CHỌN NÓN THEO YÊU CẦU: Nón 1(vong7.png), Nón 2(vong13.png), Nón 3(vong14.png), Nón 4(vong18.png), Nón 5(vong19.png), Nón 6(vong23.png) -->
+      <div class="mb-5">
+        <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
+          CHỌN NÓN SÂN KHẤU (Mặc định: Nón 1 - vong7.png):
+        </label>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5" id="wheelSelectionContainer">
+          <!-- Wheel 1 -->
+          <button onclick="selectWheel('vong7.png')" id="wheelBtn_vong7" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border-2 border-amber-500 text-center transition shadow flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-full overflow-hidden border border-amber-400/50 flex items-center justify-center bg-slate-900">
+              <img src="/vong7.png" alt="Nón 1" class="w-full h-full object-cover">
+            </div>
+            <div class="text-xs font-black text-amber-300">Nón 1</div>
+            <div class="text-[10px] text-slate-400 font-mono">vong7.png</div>
+          </button>
+
+          <!-- Wheel 2 -->
+          <button onclick="selectWheel('vong13.png')" id="wheelBtn_vong13" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+              <img src="/vong13.png" alt="Nón 2" class="w-full h-full object-cover">
+            </div>
+            <div class="text-xs font-bold text-slate-300">Nón 2</div>
+            <div class="text-[10px] text-slate-400 font-mono">vong13.png</div>
+          </button>
+
+          <!-- Wheel 3 -->
+          <button onclick="selectWheel('vong14.png')" id="wheelBtn_vong14" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+              <img src="/vong14.png" alt="Nón 3" class="w-full h-full object-cover">
+            </div>
+            <div class="text-xs font-bold text-slate-300">Nón 3</div>
+            <div class="text-[10px] text-slate-400 font-mono">vong14.png</div>
+          </button>
+
+          <!-- Wheel 4 -->
+          <button onclick="selectWheel('vong18.png')" id="wheelBtn_vong18" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+              <img src="/vong18.png" alt="Nón 4" class="w-full h-full object-cover">
+            </div>
+            <div class="text-xs font-bold text-slate-300">Nón 4</div>
+            <div class="text-[10px] text-slate-400 font-mono">vong18.png</div>
+          </button>
+
+          <!-- Wheel 5 -->
+          <button onclick="selectWheel('vong19.png')" id="wheelBtn_vong19" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+              <img src="/vong19.png" alt="Nón 5" class="w-full h-full object-cover">
+            </div>
+            <div class="text-xs font-bold text-slate-300">Nón 5</div>
+            <div class="text-[10px] text-slate-400 font-mono">vong19.png</div>
+          </button>
+
+          <!-- Wheel 6 -->
+          <button onclick="selectWheel('vong23.png')" id="wheelBtn_vong23" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+              <img src="/vong23.png" alt="Nón 6" class="w-full h-full object-cover">
+            </div>
+            <div class="text-xs font-bold text-slate-300">Nón 6</div>
+            <div class="text-[10px] text-slate-400 font-mono">vong23.png</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Các nút điều khiển nón theo đúng yêu cầu: Quay Nón, Mở quay Player 1, Mở quay Player 2, Mở quay Player 3, Khóa tất cả -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <!-- Quay Nón (trực tiếp từ Controller, duration 22s) -->
+        <button onclick="triggerWheelSpin()" class="btn-action px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl text-xs sm:text-sm shadow-lg shadow-amber-500/20">
+          <span>Quay Nón (22s)</span>
+        </button>
+
+        <!-- Mở quay Player 1 -->
+        <button onclick="allowPlayerSpin(1)" class="btn-action px-4 py-2.5 bg-red-600/90 hover:bg-red-500 text-white rounded-xl text-xs font-bold border border-red-500/30">
+          Mở quay Player 1
+        </button>
+
+        <!-- Mở quay Player 2 -->
+        <button onclick="allowPlayerSpin(2)" class="btn-action px-4 py-2.5 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold border border-emerald-500/30">
+          Mở quay Player 2
+        </button>
+
+        <!-- Mở quay Player 3 -->
+        <button onclick="allowPlayerSpin(3)" class="btn-action px-4 py-2.5 bg-blue-600/90 hover:bg-blue-500 text-white rounded-xl text-xs font-bold border border-blue-500/30">
+          Mở quay Player 3
+        </button>
+
+        <!-- Khóa tất cả -->
+        <button onclick="lockAllSpins()" class="btn-action px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold">
+          Khóa tất cả
+        </button>
+      </div>
+
+      <!-- ĐIỀU KHIỂN ĐÈN KIM & ẨN HIỆN KIM NÓN (POINTERS) -->
+      <div class="mt-4 pt-4 border-t border-slate-800">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <span>ĐIỀU KHIỂN ĐÈN & TRẠNG THÁI KIM NÓN:</span>
+          </label>
+          <div class="flex items-center gap-2 text-[11px] flex-wrap">
+            <span id="p1_statusBadge" class="px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40 font-bold">Kim Đỏ: Bật / Hiện</span>
+            <span id="p2_statusBadge" class="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 font-bold">Kim Vàng: Bật / Hiện</span>
+            <span id="p3_statusBadge" class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold">Kim Xanh: Bật / Hiện</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+          <!-- Kim Đỏ (Bật/Tắt đèn Kim 1) -->
+          <button id="btnToggleKimDo" onclick="togglePointerLight('p1')" class="btn-action px-3 py-2 bg-red-600/90 hover:bg-red-500 text-white rounded-xl text-xs font-bold border border-red-500/40 flex items-center justify-center gap-1.5 shadow">
+            <span>Kim Đỏ</span>
+          </button>
+
+          <!-- Kim Vàng (Bật/Tắt đèn Kim 2) -->
+          <button id="btnToggleKimVang" onclick="togglePointerLight('p2')" class="btn-action px-3 py-2 bg-yellow-600/90 hover:bg-yellow-500 text-white rounded-xl text-xs font-bold border border-yellow-500/40 flex items-center justify-center gap-1.5 shadow">
+            <span>Kim Vàng</span>
+          </button>
+
+          <!-- Kim Xanh (Bật/Tắt đèn Kim 3) -->
+          <button id="btnToggleKimXanh" onclick="togglePointerLight('p3')" class="btn-action px-3 py-2 bg-blue-600/90 hover:bg-blue-500 text-white rounded-xl text-xs font-bold border border-blue-500/40 flex items-center justify-center gap-1.5 shadow">
+            <span>Kim Xanh</span>
+          </button>
+
+          <!-- Bật tất cả (Cả 3 kim sáng đèn) -->
+          <button onclick="setAllPointerLights(true)" class="btn-action px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-emerald-100 rounded-xl text-xs font-bold border border-emerald-500/40 flex items-center justify-center gap-1.5 shadow">
+            <span>Bật tất cả</span>
+          </button>
+
+          <!-- Tắt tất cả (Cả 3 kim tắt đèn -> pointer4.png) -->
+          <button onclick="setAllPointerLights(false)" class="btn-action px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700 flex items-center justify-center gap-1.5 shadow">
+            <span>Tắt tất cả</span>
+          </button>
+
+          <!-- Ẩn/Hiện Kim 1 (Đỏ) -->
+          <button id="btnToggleVisKim1" onclick="togglePointerVisibility('p1')" class="btn-action px-3 py-2 bg-slate-800 hover:bg-slate-700 text-red-300 rounded-xl text-xs font-bold border border-red-500/30 flex items-center justify-center gap-1">
+            <span>Ẩn/Hiện Kim 1</span>
+          </button>
+
+          <!-- Ẩn/Hiện Kim 3 (Xanh) -->
+          <button id="btnToggleVisKim3" onclick="togglePointerVisibility('p3')" class="btn-action px-3 py-2 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded-xl text-xs font-bold border border-blue-500/30 flex items-center justify-center gap-1">
+            <span>Ẩn/Hiện Kim 3</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Trạng thái quyền quay -->
+      <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+        <div>Quyền quay: <span id="spinPermissionStatus" class="font-bold text-slate-200">Đang khóa tất cả</span></div>
+        <div>Trạng thái: <span id="wheelSpinningStatus" class="font-bold text-slate-400">Đứng yên</span></div>
+      </div>
+    </section>
+
+    <!-- PHẦN 6: CHUÔNG GIÀNH QUYỀN & RESET HỆ THỐNG -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-200">CHUÔNG GIÀNH QUYỀN TRẢ LỜI:</span>
+            <span id="buzzerStateBadge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">ĐANG KHÓA</span>
+          </div>
+          <div id="buzzerWinnerStatus" class="text-xs text-slate-400 mt-0.5">Chưa có ai bấm chuông</div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- 4 NÚT THEO YÊU CẦU: Mở chuông, Khóa chuông, Reset và mở, Reset và khóa -->
+        <button onclick="enableBuzzer()" class="btn-action px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg transition">
+          Mở chuông
+        </button>
+        <button onclick="disableBuzzer()" class="btn-action px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 transition">
+          Khóa chuông
+        </button>
+        <button onclick="resetAndEnableBuzzer()" class="btn-action px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg shadow-lg transition">
+          Reset và mở
+        </button>
+        <button onclick="resetAndDisableBuzzer()" class="btn-action px-3 py-2 bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-200 border border-indigo-700/60 text-xs font-bold rounded-lg transition">
+          Reset và khóa
+        </button>
+
+        <div class="h-6 w-px bg-slate-800 mx-1 hidden sm:block"></div>
+
+        <button onclick="promptResetAll()" class="btn-action px-3 py-2 bg-rose-950/60 hover:bg-rose-900/80 text-rose-400 border border-rose-800/50 text-xs font-bold rounded-lg">
+          Reset toàn bộ game
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const socket = io();
+    let localGameState = null;
+    let pendingRoundChoice = null;
+
+    // Zero Alert / Confirm Implementation
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bg = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-rose-600' : 'bg-slate-800 border border-slate-700');
+      toast.className = `p-3 rounded-xl text-white text-xs font-bold shadow-2xl ${bg} pointer-events-auto flex items-center justify-between gap-3 toast-enter`;
+      toast.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span>${message}</span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white font-bold">X</button>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.add('toast-visible'), 10);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    let confirmCallback = null;
+    function openConfirmModal(title, msg, onConfirm) {
+      document.getElementById('confirmModalTitle').innerText = title;
+      document.getElementById('confirmModalMessage').innerText = msg;
+      confirmCallback = onConfirm;
+      document.getElementById('customConfirmModal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal(result) {
+      document.getElementById('customConfirmModal').classList.add('hidden');
+      if (result && typeof confirmCallback === 'function') {
+        confirmCallback();
+      }
+      confirmCallback = null;
+    }
+
+    document.getElementById('confirmModalOkBtn').onclick = () => closeConfirmModal(true);
+
+    function promptResetAll() {
+      openConfirmModal(
+        'RESET TOÀN BỘ GAME',
+        'Bạn có chắc chắn muốn đặt lại tất cả điểm số, vòng chơi, ô chữ và nón về mặc định?',
+        () => {
+          socket.emit('game:reset_all');
+          showToast('Đã reset toàn bộ hệ thống về mặc định', 'success');
+        }
+      );
+    }
+
+    // Socket Connection
+    socket.on('connect', () => {
+      document.getElementById('connectionStatus').innerHTML = `
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Đã kết nối</span>
+      `;
+      socket.emit('state:request');
+    });
+
+    socket.on('disconnect', () => {
+      document.getElementById('connectionStatus').innerHTML = `
+        <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+        <span>Mất kết nối</span>
+      `;
+    });
+
+    socket.on('game:state', (state) => {
+      localGameState = state;
+      updateUI(state);
+    });
+
+    // Tự động tải trạng thái mới nhất ngay khi mở/F5/Reload
+    fetch('/api/state')
+      .then(res => res.json())
+      .then(state => {
+        if (state) {
+          localGameState = state;
+          updateUI(state);
+        }
+      })
+      .catch(() => {});
+
+    // UI Updates
+    function updateUI(state) {
+      if (!state) return;
+
+      // 3 Players Rows
+      state.players.forEach(p => {
+        const id = p.id;
+        const badgeName = document.getElementById(`p${id}_badgeName`);
+        const dispRound = document.getElementById(`p${id}_dispRound`);
+        const dispTotal = document.getElementById(`p${id}_dispTotal`);
+        const nameInput = document.getElementById(`p${id}_nameInput`);
+
+        if (badgeName) badgeName.innerText = p.name || `Người chơi ${id}`;
+        if (dispRound) dispRound.innerText = Number(p.roundScore || 0).toLocaleString('vi-VN');
+        if (dispTotal) dispTotal.innerText = Number(p.totalScore || 0).toLocaleString('vi-VN');
+        if (nameInput && !nameInput.value) {
+          nameInput.placeholder = p.name;
+        }
+
+        const row = document.getElementById(`playerRow${id}`);
+        if (row) {
+          if (p.canSpin) {
+            row.classList.add('ring-2', 'ring-amber-400', 'bg-amber-950/20');
+          } else if (p.buzzed) {
+            row.classList.add('ring-2', 'ring-rose-500', 'bg-rose-950/20');
+          } else {
+            row.classList.remove('ring-2', 'ring-amber-400', 'ring-rose-500', 'bg-amber-950/20', 'bg-rose-950/20');
+          }
+        }
+      });
+
+      // Current Round
+      const roundDisp = document.getElementById('currentRoundDisplay');
+      if (roundDisp) roundDisp.innerText = state.currentRound || 'Vòng 1';
+      const roundBadgeInCard = document.getElementById('currentRoundBadgeInCard');
+      if (roundBadgeInCard) roundBadgeInCard.innerText = state.currentRound || 'Vòng 1';
+
+      // Highlight active round button
+      document.querySelectorAll('.round-btn').forEach(btn => {
+        const text = btn.innerText;
+        if (text.includes(state.currentRound)) {
+          btn.className = 'round-btn btn-action py-2.5 px-3 bg-indigo-600 border border-indigo-400 text-white rounded-xl text-xs font-bold text-center ring-2 ring-indigo-400';
+        } else if (text.includes('Vòng đặc biệt')) {
+          btn.className = 'round-btn btn-action py-2.5 px-3 bg-gradient-to-r from-amber-600 to-yellow-500 border border-yellow-400 text-white rounded-xl text-xs font-extrabold text-center shadow-lg shadow-amber-900/30';
+        } else {
+          btn.className = 'round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center';
+        }
+      });
+
+      // Puzzle inputs (if not currently typing)
+      const catInput = document.getElementById('puzzleCategoryInput');
+      const clueInput = document.getElementById('puzzleClueInput');
+      const ansInput = document.getElementById('puzzleAnswerInput');
+      if (catInput && document.activeElement !== catInput) catInput.value = state.puzzle.category || '';
+      if (clueInput && document.activeElement !== clueInput) clueInput.value = state.puzzle.clue || '';
+      if (ansInput && document.activeElement !== ansInput) ansInput.value = state.puzzle.answer || '';
+
+      // Board state label
+      const boardStateLabel = document.getElementById('boardStateLabel');
+      if (boardStateLabel) {
+        if (state.puzzle.boardState === 'visible') boardStateLabel.innerText = 'Đang hiện ô chữ (Chờ lật)';
+        else if (state.puzzle.boardState === 'revealed') boardStateLabel.innerText = 'Đã giải toàn bộ';
+        else if (state.puzzle.boardState === 'cleared') boardStateLabel.innerText = 'Bảng trống';
+        else boardStateLabel.innerText = 'Đang ẩn ô chữ';
+      }
+
+      // Border color badge
+      const borderBadge = document.getElementById('currentBorderColorBadge');
+      if (borderBadge) {
+        const curColor = (state.puzzle && state.puzzle.borderColor) ? state.puzzle.borderColor.toLowerCase() : '#800080';
+        const colorNameMap = {
+          '#800080': 'Tím (800080)',
+          '#ff0000': 'Đỏ (ff0000)',
+          '#ffff00': 'Vàng (ffff00)',
+          '#0000ff': 'Xanh (0000ff)',
+          '#00ff00': 'Xanh lá (00ff00)',
+          '#ffffff': 'Trắng (ffffff)'
+        };
+        borderBadge.innerText = colorNameMap[curColor] || curColor.toUpperCase();
+        borderBadge.style.color = curColor === '#ffffff' ? '#000000' : (curColor === '#ffff00' || curColor === '#00ff00' ? '#000000' : '#ffffff');
+        borderBadge.style.backgroundColor = curColor;
+        borderBadge.style.borderColor = curColor === '#ffffff' ? '#94a3b8' : curColor;
+      }
+
+      // Alphabet Keyboard
+      renderAlphabet(state.puzzle.revealedLetters || []);
+
+      // Wheel Selection Highlight
+      const activeWheel = state.wheel.selectedWheel || 'vong7.png';
+      const wheelBadge = document.getElementById('currentSelectedWheelBadge');
+      if (wheelBadge) {
+        const wheelMap = {
+          'vong7.png': 'Nón 1 (vong7.png)',
+          'vong13.png': 'Nón 2 (vong13.png)',
+          'vong14.png': 'Nón 3 (vong14.png)',
+          'vong18.png': 'Nón 4 (vong18.png)',
+          'vong19.png': 'Nón 5 (vong19.png)',
+          'vong23.png': 'Nón 6 (vong23.png)'
+        };
+        wheelBadge.innerText = wheelMap[activeWheel] || activeWheel;
+      }
+
+      ['vong7', 'vong13', 'vong14', 'vong18', 'vong19', 'vong23'].forEach(id => {
+        const btn = document.getElementById(`wheelBtn_${id}`);
+        if (btn) {
+          if (activeWheel.includes(id)) {
+            btn.className = 'wheel-select-btn p-3 rounded-xl bg-slate-900 border-2 border-amber-400 text-center transition shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/50 flex flex-col items-center gap-2';
+          } else {
+            btn.className = 'wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2 opacity-80 hover:opacity-100';
+          }
+        }
+      });
+
+      // Spin status
+      const spinStatus = document.getElementById('wheelSpinningStatus');
+      if (spinStatus) {
+        spinStatus.innerText = state.wheel.spinning ? 'ĐANG QUAY (22s)...' : 'Đứng yên';
+        spinStatus.className = state.wheel.spinning ? 'font-bold text-amber-400 animate-pulse' : 'font-bold text-slate-400';
+      }
+
+      // Pointers (Kim nón) status
+      if (state.wheel && state.wheel.pointers) {
+        const p1 = state.wheel.pointers.p1 || { light: true, visible: true };
+        const p2 = state.wheel.pointers.p2 || { light: true, visible: true };
+        const p3 = state.wheel.pointers.p3 || { light: true, visible: true };
+
+        const b1 = document.getElementById('p1_statusBadge');
+        if (b1) {
+          b1.innerText = `Kim Đỏ: ${p1.light !== false ? 'BẬT' : 'TẮT'} / ${p1.visible !== false ? 'HIỆN' : 'ẨN'}`;
+          b1.className = `px-2 py-0.5 rounded font-bold ${p1.light !== false ? 'bg-red-500/20 text-red-300 border border-red-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'}`;
+        }
+        const b2 = document.getElementById('p2_statusBadge');
+        if (b2) {
+          b2.innerText = `Kim Vàng: ${p2.light !== false ? 'BẬT' : 'TẮT'} / ${p2.visible !== false ? 'HIỆN' : 'ẨN'}`;
+          b2.className = `px-2 py-0.5 rounded font-bold ${p2.light !== false ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'}`;
+        }
+        const b3 = document.getElementById('p3_statusBadge');
+        if (b3) {
+          b3.innerText = `Kim Xanh: ${p3.light !== false ? 'BẬT' : 'TẮT'} / ${p3.visible !== false ? 'HIỆN' : 'ẨN'}`;
+          b3.className = `px-2 py-0.5 rounded font-bold ${p3.light !== false ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'}`;
+        }
+
+        const btnVis1 = document.getElementById('btnToggleVisKim1');
+        if (btnVis1) {
+          btnVis1.innerText = p1.visible !== false ? 'Ẩn Kim 1' : 'Hiện Kim 1';
+        }
+        const btnVis3 = document.getElementById('btnToggleVisKim3');
+        if (btnVis3) {
+          btnVis3.innerText = p3.visible !== false ? 'Ẩn Kim 3' : 'Hiện Kim 3';
+        }
+      }
+
+      // Spin Permission
+      const permStatus = document.getElementById('spinPermissionStatus');
+      if (permStatus) {
+        const canSpinPlayer = state.players.find(p => p.canSpin);
+        if (canSpinPlayer) {
+          permStatus.innerText = `Cho phép ${canSpinPlayer.name} quay`;
+          permStatus.className = 'font-bold text-amber-400';
+        } else if (state.wheel.lockedAll) {
+          permStatus.innerText = 'Đã khóa tất cả';
+          permStatus.className = 'font-bold text-slate-400';
+        } else {
+          permStatus.innerText = 'Mở tự do';
+          permStatus.className = 'font-bold text-emerald-400';
+        }
+      }
+
+      // Buzzer status
+      const buzzStatus = document.getElementById('buzzerWinnerStatus');
+      const buzzBadge = document.getElementById('buzzerStateBadge');
+      if (buzzBadge) {
+        if (state.buzzer && state.buzzer.winner) {
+          buzzBadge.innerText = 'ĐÃ CÓ NGƯỜI BẤM';
+          buzzBadge.className = 'text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/50';
+        } else if (state.buzzer && state.buzzer.enabled) {
+          buzzBadge.innerText = 'ĐANG MỞ';
+          buzzBadge.className = 'text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 animate-pulse';
+        } else {
+          buzzBadge.innerText = 'ĐANG KHÓA';
+          buzzBadge.className = 'text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700';
+        }
+      }
+      if (buzzStatus) {
+        if (state.buzzer && state.buzzer.winner) {
+          const winner = state.players.find(p => p.id === state.buzzer.winner);
+          buzzStatus.innerHTML = `<span class="text-rose-400 font-extrabold text-sm animate-pulse">${winner ? winner.name : 'Người chơi'}</span> đã bấm chuông lúc ${winner ? (winner.buzzTime || '') : ''}`;
+        } else if (state.buzzer && state.buzzer.enabled) {
+          buzzStatus.innerHTML = '<span class="text-emerald-400 font-bold">Chuông đang mở - Người chơi có thể bấm chuông</span>';
+        } else {
+          buzzStatus.innerText = 'Chuông đang khóa';
+        }
+      }
+
+      // Category & Clue Visibility Sync
+      const isCatShow = state.puzzle.showCategory !== false;
+      const isClueShow = state.puzzle.showClue !== false;
+
+      const catLabel = document.getElementById('categoryStatusLabel');
+      const btnCat = document.getElementById('btnToggleCategory');
+      if (catLabel) catLabel.innerText = isCatShow ? 'Hiện' : 'Ẩn';
+      if (btnCat) {
+        btnCat.className = isCatShow 
+          ? 'btn-action px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5'
+          : 'btn-action px-4 py-2 bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5';
+      }
+
+      const clueLabel = document.getElementById('clueStatusLabel');
+      const btnClue = document.getElementById('btnToggleClue');
+      if (clueLabel) clueLabel.innerText = isClueShow ? 'Hiện' : 'Ẩn';
+      if (btnClue) {
+        btnClue.className = isClueShow
+          ? 'btn-action px-4 py-2 bg-teal-700 hover:bg-teal-600 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5'
+          : 'btn-action px-4 py-2 bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5';
+      }
+
+      // Render rounds summary in card
+      renderImportedRoundsSummary(state.roundsData || {});
+    }
+
+    function toggleCategoryVisibility() {
+      socket.emit('puzzle:toggle_category');
+      showToast('Đã chuyển đổi trạng thái Ẩn/Hiện thanh chủ đề', 'info');
+    }
+
+    function toggleClueVisibility() {
+      socket.emit('puzzle:toggle_clue');
+      showToast('Đã chuyển đổi trạng thái Ẩn/Hiện câu hỏi', 'info');
+    }
+
+    // 3 Players Score Functions
+    function setPlayer(id) {
+      const name = document.getElementById(`p${id}_nameInput`).value;
+      const score = document.getElementById(`p${id}_scoreInput`).value;
+      socket.emit('player:set', { playerId: id, name, roundScore: score });
+      showToast(`Đã lưu thông tin Người chơi ${id}`, 'success');
+    }
+
+    function addRoundScore(id) {
+      const score = document.getElementById(`p${id}_scoreInput`).value;
+      const val = Number(score) || 0;
+      if (val === 0) {
+        showToast('Vui lòng nhập số điểm muốn cộng!', 'error');
+        return;
+      }
+      socket.emit('player:add_round', { playerId: id, amount: val });
+      showToast(`Đã cộng +${val.toLocaleString()} vào điểm vòng P${id}`, 'success');
+    }
+
+    function subtractRoundScore(id) {
+      const score = document.getElementById(`p${id}_scoreInput`).value;
+      const val = Number(score) || 0;
+      if (val === 0) {
+        showToast('Vui lòng nhập số điểm muốn trừ!', 'error');
+        return;
+      }
+      socket.emit('player:subtract_round', { playerId: id, amount: val });
+      showToast(`Đã trừ -${val.toLocaleString()} khỏi điểm vòng P${id}`, 'info');
+    }
+
+    function resetRoundScore(id) {
+      socket.emit('player:reset_round', { playerId: id });
+      showToast(`Đã reset điểm vòng P${id} về 0`, 'info');
+    }
+
+    function multiplyRoundScore(id, factor) {
+      socket.emit('player:multiply_round', { playerId: id, factor });
+      showToast(`Điểm vòng P${id} đã được ${factor === 2 ? 'nhân đôi (x2)' : 'chia đôi (/2)'}`, 'success');
+    }
+
+    function setTotalScore(id) {
+      const total = document.getElementById(`p${id}_totalInput`).value;
+      socket.emit('player:set_total', { playerId: id, totalScore: total });
+      showToast(`Đã set điểm tổng P${id}`, 'success');
+    }
+
+    function addRoundToTotal(id) {
+      socket.emit('player:add_to_total', { playerId: id, resetRound: true });
+      showToast(`Đã cộng điểm vòng vào điểm tổng cho P${id}`, 'success');
+    }
+
+    // Round Click Handler with Requirement:
+    // "Ở Vòng 1 - 4, Vòng đặc biệt, khi bấm nút vòng, sẽ có 1 popup hiện ra. Với 2 nút bấm: Ô chữ cố định hay chọn 1 trong 3 chủ đề.
+    // Nếu chọn ô chữ cố định, ô chữ trống hiện ra.
+    // Nếu chọn chọn 1 trong 3 chủ đề, phải chọn chủ đề thì ô chữ mới hiện ra."
+    const MODAL_ROUNDS = ['Vòng 1', 'Vòng 2', 'Vòng 3', 'Vòng 4', 'Vòng đặc biệt'];
+
+    function triggerRoundClick(roundName) {
+      if (MODAL_ROUNDS.includes(roundName)) {
+        openRoundSelectionModal(roundName);
+      } else {
+        // Direct round change for quick guess rounds
+        socket.emit('round:set', roundName);
+        showToast(`Đã chuyển sang ${roundName}`, 'info');
+      }
+    }
+
+    function openRoundSelectionModal(roundName) {
+      pendingRoundChoice = roundName;
+      document.getElementById('modalRoundName').innerText = `BẮT ĐẦU ${roundName.toUpperCase()}`;
+      document.getElementById('modalStep1Options').classList.remove('hidden');
+      document.getElementById('modalStep2Topics').classList.add('hidden');
+      document.getElementById('roundSelectionModal').classList.remove('hidden');
+    }
+
+    function closeRoundSelectionModal() {
+      document.getElementById('roundSelectionModal').classList.add('hidden');
+      pendingRoundChoice = null;
+    }
+
+    function backToModalStep1() {
+      document.getElementById('modalStep1Options').classList.remove('hidden');
+      document.getElementById('modalStep2Topics').classList.add('hidden');
+    }
+
+    // Choice 1: "Ô chữ cố định" -> "ô chữ trống hiện ra"
+    function handleSelectFixedPuzzle() {
+      if (!pendingRoundChoice) return;
+      socket.emit('round:choose_fixed', pendingRoundChoice);
+      showToast(`Đã mở ô chữ cố định cho ${pendingRoundChoice}. Ô chữ trống đã hiện trên bảng!`, 'success');
+      closeRoundSelectionModal();
+    }
+
+    // Choice 2: "Chọn 1 trong 3 chủ đề" -> "phải chọn chủ đề thì ô chữ mới hiện ra"
+    function handleStartTopicSelectionStep() {
+      if (!pendingRoundChoice) return;
+      socket.emit('round:start_topic_selection', pendingRoundChoice);
+
+      // Render the 3 topics
+      const roundData = (localGameState && localGameState.roundsData && localGameState.roundsData[pendingRoundChoice]) || [];
+      const container = document.getElementById('topicsContainer');
+      container.innerHTML = '';
+
+      const topics = roundData.slice(0, 3);
+      if (topics.length === 0) {
+        // Fallback default 3 topics if not yet configured in excel
+        topics.push(
+          { category: 'CHỦ ĐỀ 1', answer: 'Ô CHỮ MỘT' },
+          { category: 'CHỦ ĐỀ 2', answer: 'Ô CHỮ HAI' },
+          { category: 'CHỦ ĐỀ 3', answer: 'Ô CHỮ BA' }
+        );
+      }
+
+      topics.forEach((t, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'w-full p-4 rounded-xl bg-slate-800 hover:bg-slate-700 border-2 border-amber-500/40 hover:border-amber-400 text-left transition flex items-center justify-between group shadow';
+        btn.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-black text-sm">
+              ${idx + 1}
+            </span>
+            <div>
+              <div class="text-sm font-black text-white group-hover:text-amber-300 uppercase">${t.category}</div>
+              <div class="text-xs text-slate-400">Bấm để chọn chủ đề này & hiện ô chữ</div>
+            </div>
+          </div>
+        `;
+        btn.onclick = () => {
+          socket.emit('round:pick_topic', { round: pendingRoundChoice, topicIndex: idx });
+          showToast(`Đã chọn chủ đề "${t.category}". Ô chữ trống của chủ đề này đã hiện lên sân khấu!`, 'success');
+          closeRoundSelectionModal();
+        };
+        container.appendChild(btn);
+      });
+
+      document.getElementById('modalStep1Options').classList.add('hidden');
+      document.getElementById('modalStep2Topics').classList.remove('hidden');
+    }
+
+    // Wheel Selection (Nón 1 to Nón 6)
+    function selectWheel(wheelId) {
+      socket.emit('wheel:select', wheelId);
+      showToast(`Đã đổi sang ${wheelId}`, 'info');
+    }
+
+    // Wheel Spin Duration: Strictly 22s!
+    function triggerWheelSpin() {
+      socket.emit('wheel:spin', { spinner: 'controller', duration: 22000 });
+      showToast('Đang quay nón (Thời gian quay: 22 giây)...', 'info');
+    }
+
+    function allowPlayerSpin(id) {
+      socket.emit('wheel:allow_player', id);
+      showToast(`Đã mở quyền quay cho Player ${id}`, 'success');
+    }
+
+    function lockAllSpins() {
+      socket.emit('wheel:lock_all');
+      showToast('Đã khóa quyền quay của tất cả người chơi', 'info');
+    }
+
+    // Pointer Lights & Visibility Controls
+    function togglePointerLight(pointer) {
+      socket.emit('wheel:toggle_pointer_light', pointer);
+    }
+
+    function setAllPointerLights(light) {
+      socket.emit('wheel:set_all_pointer_lights', { light });
+      showToast(light ? 'Đã bật đèn tất cả các kim' : 'Đã tắt đèn tất cả các kim (về pointer4.png)', 'info');
+    }
+
+    function togglePointerVisibility(pointer) {
+      socket.emit('wheel:toggle_pointer_visibility', pointer);
+      showToast('Đã đổi trạng thái ẩn/hiện của kim', 'info');
+    }
+
+    // Puzzle Actions
+    function puzzleAction(action) {
+      if (action === 'show') {
+        socket.emit('puzzle:show');
+        showToast('Đã hiện ô chữ', 'success');
+      } else if (action === 'solve') {
+        socket.emit('puzzle:solve');
+        showToast('Đã giải toàn bộ ô chữ', 'success');
+      } else if (action === 'reset') {
+        socket.emit('puzzle:reset');
+        showToast('Đã reset bảng trống', 'info');
+      } else if (action === 'start_reveal') {
+        socket.emit('puzzle:start_reveal', { intervalMs: 1500 });
+        showToast('Bắt đầu tự động hiện chữ (Đoán nhanh)', 'info');
+      } else if (action === 'stop_reveal') {
+        socket.emit('puzzle:stop_reveal');
+        showToast('Đã dừng hiện chữ', 'info');
+      } else if (action === 'resume_reveal') {
+        socket.emit('puzzle:resume_reveal');
+        showToast('Tiếp tục hiện chữ (Khung bảng chuyển sang màu tím)', 'info');
+      }
+    }
+
+    function setPuzzleBorderColor(color) {
+      if (!color) return;
+      socket.emit('puzzle:set_border_color', color);
+      const colorNames = {
+        '#800080': 'Tím (800080)',
+        '#ff0000': 'Đỏ (ff0000)',
+        '#ffff00': 'Vàng (ffff00)',
+        '#0000ff': 'Xanh (0000ff)',
+        '#00ff00': 'Xanh lá (00ff00)',
+        '#ffffff': 'Trắng (ffffff)'
+      };
+      showToast(`Đã đổi màu viền ô chữ sang ${colorNames[color] || color}`, 'success');
+    }
+
+    function applyManualPuzzle() {
+      const category = document.getElementById('puzzleCategoryInput').value;
+      const clue = document.getElementById('puzzleClueInput').value;
+      const answer = document.getElementById('puzzleAnswerInput').value;
+      if (!answer || !answer.trim()) {
+        showToast('Vui lòng nhập đáp án ô chữ!', 'error');
+        return;
+      }
+      socket.emit('puzzle:set', { category, clue, answer });
+      showToast('Đã áp dụng câu hỏi mới', 'success');
+    }
+
+    // Dò chữ cái, Mở lần 1 (Đánh dấu) và Mở lần 2 (Mở chữ)
+    function removeToneMarks(str) {
+      if (!str) return '';
+      const toneMap = {
+        'Á':'A','À':'A','Ả':'A','Ã':'A','Ạ':'A',
+        'Ắ':'Ă','Ằ':'Ă','Ẳ':'Ă','Ẵ':'Ă','Ặ':'Ă',
+        'Ấ':'Â','Ầ':'Â','Ẩ':'Â','Ẫ':'Â','Ậ':'Â',
+        'É':'E','È':'E','Ẻ':'E','Ẽ':'E','Ẹ':'E',
+        'Ế':'Ê','Ề':'Ê','Ể':'Ê','Ễ':'Ê','Ệ':'Ê',
+        'Í':'I','Ì':'I','Ỉ':'I','Ĩ':'I','Ị':'I',
+        'Ó':'O','Ò':'O','Ỏ':'O','Õ':'O','Ọ':'O',
+        'Ố':'Ô','Ồ':'Ô','Ổ':'Ô','Ỗ':'Ô','Ộ':'Ô',
+        'Ớ':'Ơ','Ờ':'Ơ','Ở':'Ơ','Ỡ':'Ơ','Ợ':'Ơ',
+        'Ú':'U','Ù':'U','Ủ':'U','Ũ':'U','Ụ':'U',
+        'Ứ':'Ư','Ừ':'Ư','Ử':'Ư','Ữ':'Ư','Ự':'Ư',
+        'Ý':'Y','Ỳ':'Y','Ỷ':'Y','Ỹ':'Y','Ỵ':'Y'
+      };
+      return str.split('').map(c => toneMap[c.toUpperCase()] || c.toUpperCase()).join('');
+    }
+
+    let selectedLetter = null;
+    let selectedLetterCount = 0;
+
+    function selectAndCheckLetter(letter) {
+      selectedLetter = letter;
+      socket.emit('puzzle:check_letter', letter);
+
+      // Local fast calculation from localGameState
+      let count = 0;
+      if (localGameState && localGameState.puzzle) {
+        const matrix = localGameState.puzzle.gridMatrix;
+        const revealed = localGameState.puzzle.revealedIndices || [];
+        if (matrix && Array.isArray(matrix) && matrix.length === 4) {
+          for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 16; c++) {
+              const ch = (matrix[r] && matrix[r][c]) ? matrix[r][c] : '';
+              if (ch && ch.trim()) {
+                const cellIdx = r * 16 + c;
+                if (removeToneMarks(ch) === letter && !revealed.includes(cellIdx)) {
+                  count++;
+                }
+              }
+            }
+          }
+        } else if (localGameState.puzzle.answer) {
+          const chars = localGameState.puzzle.answer.toUpperCase().split('');
+          for (let i = 0; i < chars.length; i++) {
+            const c = chars[i];
+            if (c !== ' ' && removeToneMarks(c) === letter && !revealed.includes(i)) {
+              count++;
+            }
+          }
+        }
+      }
+      selectedLetterCount = count;
+      updateCheckBadge(letter, count);
+      renderAlphabet();
+    }
+
+    function updateCheckBadge(letter, count) {
+      const badge = document.getElementById('checkResultBadge');
+      if (!badge) return;
+      if (count > 0) {
+        badge.innerHTML = `Chữ đang chọn: <strong class="text-white text-sm px-2 py-0.5 bg-blue-600 rounded">[ ${letter} ]</strong> — Tìm thấy: <strong class="text-emerald-400 text-sm font-black">[ ${count} ] ô</strong> trong câu đố`;
+        badge.className = 'px-3.5 py-1 rounded-lg bg-slate-900 border border-emerald-500/50 text-xs font-bold text-slate-200';
+      } else {
+        badge.innerHTML = `Chữ đang chọn: <strong class="text-white text-sm px-2 py-0.5 bg-slate-700 rounded">[ ${letter} ]</strong> — <strong class="text-rose-400 text-sm font-black">KHÔNG CÓ</strong> chữ này trong câu đố`;
+        badge.className = 'px-3.5 py-1 rounded-lg bg-slate-900 border border-rose-500/50 text-xs font-bold text-slate-200';
+      }
+    }
+
+    // Socket response for check letter
+    socket.on('puzzle:check_result', (data) => {
+      selectedLetter = data.letter;
+      selectedLetterCount = data.count;
+      updateCheckBadge(data.letter, data.count);
+    });
+
+    // Mở lần 1: Các ô trống sẽ được đánh dấu (màu blue)
+    function openStep1Mark() {
+      if (!selectedLetter) {
+        showToast('Vui lòng bấm chọn một chữ cái trong bảng bên dưới trước!', 'error');
+        return;
+      }
+      socket.emit('puzzle:mark_letter', selectedLetter);
+      showToast(`Mở lần 1: Đã đánh dấu màu Blue các ô chứa chữ "${selectedLetter}"`, 'info');
+    }
+
+    // Mở lần 2: Các ô đánh dấu được mở (không hiện dấu thanh hỏi, sắc, huyền, ngã, nặng)
+    function openStep2Reveal() {
+      socket.emit('puzzle:reveal_marked', selectedLetter);
+      showToast('Mở lần 2: Đã mở các ô đánh dấu (Không hiện dấu thanh)', 'success');
+    }
+
+    function clearMarkedLetters() {
+      socket.emit('puzzle:clear_marked');
+      showToast('Đã xóa đánh dấu các ô', 'info');
+    }
+
+    const alphabet = 'AĂÂBCDĐEÊGHIKLMNOÔƠPQRSTUƯVXY'.split('');
+    function renderAlphabet(revealedLetters = []) {
+      const container = document.getElementById('alphabetKeyboard');
+      if (!container) return;
+      container.innerHTML = '';
+      
+      const rev = (localGameState && localGameState.puzzle && localGameState.puzzle.revealedLetters) || revealedLetters;
+
+      alphabet.forEach(letter => {
+        const isRevealed = rev.includes(letter);
+        const isSelected = selectedLetter === letter;
+        const btn = document.createElement('button');
+        btn.innerText = letter;
+        btn.onclick = () => selectAndCheckLetter(letter);
+        
+        let styleClass = 'btn-action w-8 h-8 rounded-lg text-xs font-bold transition flex items-center justify-center ';
+        if (isSelected) {
+          styleClass += 'bg-blue-600 text-white ring-2 ring-amber-400 shadow-lg scale-105';
+        } else if (isRevealed) {
+          styleClass += 'bg-emerald-700 text-emerald-100 opacity-60 border border-emerald-600';
+        } else {
+          styleClass += 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700';
+        }
+        btn.className = styleClass;
+        container.appendChild(btn);
+      });
+    }
+
+    // Buzzer Controls (4 nút: Mở chuông, Khóa chuông, Reset và mở, Reset và khóa)
+    function enableBuzzer() {
+      socket.emit('buzzer:enable');
+      showToast('Đã mở chuông giành quyền', 'success');
+    }
+
+    function disableBuzzer() {
+      socket.emit('buzzer:disable');
+      showToast('Đã khóa chuông giành quyền', 'info');
+    }
+
+    function resetAndEnableBuzzer() {
+      socket.emit('buzzer:reset_and_enable');
+      showToast('Đã reset và mở chuông', 'success');
+    }
+
+    function resetAndDisableBuzzer() {
+      socket.emit('buzzer:reset_and_disable');
+      showToast('Đã reset và khóa chuông', 'info');
+    }
+
+    function resetBuzzer() {
+      socket.emit('buzzer:reset_and_disable');
+      showToast('Đã reset và khóa chuông', 'info');
+    }
+
+    // Excel Parser customized for Puzzle.xlsx (Hỗ trợ cấu trúc ma trận mới và sheet aliasing)
+    function handleExcelImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+
+          // Duyệt qua tất cả các Sheet trong file Excel
+          const parsedRounds = {};
+          workbook.SheetNames.forEach(sheetName => {
+            const ws = workbook.Sheets[sheetName];
+            if (!ws || !ws['!ref']) return;
+
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            
+            // Tìm các dòng header 'Chủ đề'
+            const headerRows = [];
+            for (let r = range.s.r; r <= range.e.r; r++) {
+              const cellA = ws[XLSX.utils.encode_cell({ r, c: 0 })];
+              const valA = cellA && cellA.v !== undefined ? String(cellA.v).trim().toLowerCase() : '';
+              if (valA === 'chủ đề' || valA === 'chu de' || valA.startsWith('chủ đề') || valA.startsWith('chu de')) {
+                headerRows.push(r);
+              }
+            }
+
+            if (headerRows.length === 0) {
+              for (let r = 0; r <= range.e.r; r += 6) {
+                headerRows.push(r);
+              }
+            }
+
+            const blocks = [];
+
+            headerRows.forEach((headerR, bIdx) => {
+              // Dòng headerR: Cột A = "Chủ đề", Cột B = "Ô chữ" (tên cột)
+
+              // Dòng headerR + 1: Cột A = Tên chủ đề
+              const catCell = ws[XLSX.utils.encode_cell({ r: headerR + 1, c: 0 })];
+              let category = catCell && catCell.v !== undefined ? String(catCell.v).trim() : '';
+
+              // Dòng headerR + 2: Cột A = Gợi ý / Câu hỏi
+              const clueCell = ws[XLSX.utils.encode_cell({ r: headerR + 2, c: 0 })];
+              let clue = clueCell && clueCell.v !== undefined ? String(clueCell.v).trim() : '';
+
+              // Trích xuất ma trận chính xác 4 hàng x 16 cột (B..Q tương ứng c = 1..16)
+              // Dòng 1 = headerR + 1 (ngang hàng tên Chủ đề)
+              // Dòng 2 = headerR + 2 (ngang hàng Gợi ý/Câu hỏi)
+              // Dòng 3 = headerR + 3
+              // Dòng 4 = headerR + 4
+              let gridMatrix = Array.from({ length: 4 }, () => Array(16).fill(''));
+              let fullWords = [];
+              let cellFoundCount = 0;
+
+              for (let rowIdx = 0; rowIdx < 4; rowIdx++) {
+                const r = headerR + 1 + rowIdx;
+                let curWord = '';
+                for (let colIdx = 0; colIdx < 16; colIdx++) {
+                  const c = colIdx + 1; // Col B (1) -> Col Q (16)
+                  const cell = ws[XLSX.utils.encode_cell({ r, c })];
+                  const val = cell && cell.v !== undefined ? String(cell.v).trim().toUpperCase() : '';
+                  gridMatrix[rowIdx][colIdx] = val;
+                  if (val) {
+                    cellFoundCount++;
+                    curWord += val;
+                  } else {
+                    if (curWord) {
+                      fullWords.push(curWord);
+                      curWord = '';
+                    }
+                  }
+                }
+                if (curWord) {
+                  fullWords.push(curWord);
+                }
+              }
+
+              const answer = fullWords.join(' ').replace(/\s+/g, ' ').trim().toUpperCase();
+
+              if (!category) {
+                category = `Chủ đề ${bIdx + 1}`;
+              }
+
+              if (answer || category || cellFoundCount > 0) {
+                const gridLines = gridMatrix.map(row => row.join('').trim()).filter(l => l.length > 0);
+                blocks.push({
+                  blockIndex: bIdx + 1,
+                  category: category.toUpperCase(),
+                  clue: clue || `Gợi ý cho chủ đề ${category}`,
+                  answer: answer || 'CHIẾC NÓN KỲ DIỆU',
+                  gridMatrix,
+                  gridLines
+                });
+              }
+            });
+
+            if (blocks.length > 0) {
+              parsedRounds[sheetName] = blocks;
+              const cleanName = sheetName.trim();
+              if (cleanName === 'Khán giả') parsedRounds['Vòng khán giả'] = blocks;
+              if (cleanName === 'Vòng khán giả') parsedRounds['Khán giả'] = blocks;
+              if (cleanName === 'Đặc biệt') parsedRounds['Vòng đặc biệt'] = blocks;
+              if (cleanName === 'Vòng đặc biệt') parsedRounds['Đặc biệt'] = blocks;
+              if (cleanName === 'ĐNLH') {
+                parsedRounds['Đoán nhanh 3'] = blocks;
+                if (blocks[0]) parsedRounds['ĐNLH 1'] = [blocks[0]];
+                if (blocks[1]) parsedRounds['ĐNLH 2'] = [blocks[1]];
+                if (blocks[2]) parsedRounds['ĐNLH 3'] = [blocks[2]];
+              }
+            }
+          });
+
+          const count = Object.keys(parsedRounds).length;
+          if (count > 0) {
+            socket.emit('rounds:import_data', parsedRounds);
+            showToast(`Đã nhập thành công ${count} sheet vòng thi từ file Excel!`, 'success');
+          } else {
+            showToast('Không đọc được dữ liệu từ file Excel. Vui lòng kiểm tra lại cấu trúc file!', 'error');
+          }
+        } catch (err) {
+          showToast('Lỗi khi đọc file Excel: ' + err.message, 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function renderImportedRoundsSummary(roundsData) {
+      const container = document.getElementById('importedRoundsList');
+      const countEl = document.getElementById('totalRoundsCount');
+      if (!container) return;
+
+      const keys = Object.keys(roundsData || {});
+      if (countEl) countEl.innerText = keys.length;
+
+      container.innerHTML = '';
+      if (keys.length === 0) {
+        container.innerHTML = '<div class="text-slate-500 italic">Chưa nạp đề thi từ Excel</div>';
+        return;
+      }
+
+      keys.forEach(k => {
+        const list = roundsData[k] || [];
+        const item = document.createElement('div');
+        item.className = 'p-1.5 rounded bg-slate-900 border border-slate-800 flex items-center justify-between text-[11px]';
+        item.innerHTML = `
+          <span class="font-bold text-slate-200">${k}</span>
+          <span class="text-amber-400 font-mono">${list.length} chủ đề</span>
+        `;
+        container.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Màn Hình Host / MC - Chiếc Nón Kỳ Diệu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/disableDevTools.js"></script>
+  <style>
+    :root {
+      --blue: blue;
+      --aqua: aqua;
+      --yellow: yellow;
+      --green: green;
+      --red: red;
+      --pink: #ff00cc;
+      --purple: purple;
+      --lime: #39ff14;
+      --black: #000000;
+      --white: #ffffff;
+      --light-blue: aqua;
+      --dark-blue: blue;
+      --orange: orange;
+    }
+    * {
+      font-weight: bold !important;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      user-select: none;
+    }
+    button:hover:not(:disabled),
+    .btn-action:hover:not(:disabled),
+    .btn:hover:not(:disabled),
+    a:hover,
+    input[type="button"]:hover:not(:disabled),
+    input[type="submit"]:hover:not(:disabled),
+    [role="button"]:hover {
+      background: orange !important;
+      background-color: orange !important;
+      color: #000000 !important;
+      border-color: orange !important;
+    }
+    button:hover:not(:disabled) *,
+    .btn-action:hover:not(:disabled) *,
+    .btn:hover:not(:disabled) *,
+    a:hover * {
+      color: #000000 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen w-screen overflow-hidden flex flex-col p-2 sm:p-3 gap-2">
+
+  <!-- TOP 40%: SPLIT VIEW (LEFT: PUZZLEBOARD.HTML, RIGHT: WHEEL.HTML) -->
+  <section class="h-[40%] min-h-[220px] grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 flex-shrink-0">
+    <!-- Top Left: Puzzleboard view -->
+    <div class="h-full flex flex-col bg-slate-900/90 border border-emerald-500/30 rounded-xl p-1.5 sm:p-2 shadow-lg overflow-hidden">
+      <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-400 px-1 pb-1 flex-shrink-0">
+        <span class="flex items-center gap-1.5">Bảng Ô Chữ Sân Khấu</span>
+        <span class="text-slate-400 lowercase font-mono">/Puzzleboard.html</span>
+      </div>
+      <div class="flex-1 min-h-0 w-full h-full rounded-lg overflow-hidden bg-black border border-slate-800 relative">
+        <iframe src="/Puzzleboard.html" scrolling="no" class="w-full h-full border-0 pointer-events-none select-none block overflow-hidden" title="Puzzleboard Preview"></iframe>
+      </div>
+    </div>
+
+    <!-- Top Right: Wheel view -->
+    <div class="h-full flex flex-col bg-slate-900/90 border border-amber-500/30 rounded-xl p-1.5 sm:p-2 shadow-lg overflow-hidden">
+      <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-400 px-1 pb-1 flex-shrink-0">
+        <span class="flex items-center gap-1.5">Chiếc Nón Kỳ Diệu</span>
+        <span class="text-amber-300 font-mono text-[11px]" id="hostActiveWheel">vong7.png</span>
+      </div>
+      <div class="flex-1 min-h-0 w-full h-full rounded-lg overflow-hidden bg-black border border-slate-800 relative">
+        <iframe src="/Wheel.html?zoom=pointer" scrolling="no" class="w-full h-full border-0 pointer-events-none select-none block overflow-hidden" title="Wheel Preview"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOTTOM (REMAINING 60%): PLAYER TABLE ON LEFT; TOPIC, CLUE, ANSWER & LETTER TRACKING ON RIGHT -->
+  <section class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-12 gap-2 sm:gap-3 overflow-hidden">
+    
+    <!-- BOTTOM LEFT: PLAYER TABLE (4 ROWS, 3 COLUMNS: NAME, ROUND SCORE, TOTAL SCORE) -->
+    <div class="md:col-span-5 h-full flex flex-col bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 sm:p-3 shadow-xl overflow-hidden">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800 mb-2 flex-shrink-0">
+        <h2 class="text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+          Bảng Người Chơi
+        </h2>
+        <span class="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40" id="currentRoundText">
+          Vòng 1
+        </span>
+      </div>
+
+      <!-- Buzzer Alert Notification if active -->
+      <div id="buzzerAlert" class="hidden mb-2 p-2 rounded-lg bg-rose-900/90 border border-rose-500 text-white flex items-center justify-between flex-shrink-0 animate-pulse">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-black text-rose-100" id="buzzerWinnerText">Người chơi đã bấm chuông!</span>
+        </div>
+        <span class="text-[11px] text-rose-200 font-mono" id="buzzerTimeText">--:--:--</span>
+      </div>
+
+      <!-- 4 Rows x 3 Columns Table -->
+      <div class="flex-1 w-full overflow-hidden flex flex-col justify-center">
+        <table class="w-full h-full border-collapse text-left table-fixed">
+          <thead>
+            <!-- Row 1: Table Header -->
+            <tr class="border-b border-slate-700/80 bg-slate-950/70 text-[11px] text-slate-400 uppercase tracking-wider">
+              <th class="py-2 px-3 w-[45%]">Tên Người Chơi</th>
+              <th class="py-2 px-3 w-[27.5%] text-right">Điểm Vòng</th>
+              <th class="py-2 px-3 w-[27.5%] text-right">Tổng Điểm</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/80">
+            <!-- Row 2: Player 1 (Red) -->
+            <tr id="playerRow1" class="transition-colors hover:bg-slate-800/30">
+              <td class="py-2 px-3">
+                <div class="flex items-center gap-2 truncate">
+                  <span class="w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-500/50 flex-shrink-0"></span>
+                  <span class="font-extrabold text-red-400 text-sm truncate" id="hp1_name">Người chơi 1</span>
+                  <span id="hp1_badge" class="hidden text-[10px] px-1.5 py-0.2 rounded bg-amber-500 text-slate-950">LƯỢT</span>
+                </div>
+              </td>
+              <td class="py-2 px-3 text-right font-mono font-black text-amber-300 text-base" id="hp1_round">0</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-200 text-sm" id="hp1_total">0</td>
+            </tr>
+
+            <!-- Row 3: Player 2 (Yellow) -->
+            <tr id="playerRow2" class="transition-colors hover:bg-slate-800/30">
+              <td class="py-2 px-3">
+                <div class="flex items-center gap-2 truncate">
+                  <span class="w-3 h-3 rounded-full bg-yellow-400 shadow-sm shadow-yellow-400/50 flex-shrink-0"></span>
+                  <span class="font-extrabold text-yellow-400 text-sm truncate" id="hp2_name">Người chơi 2</span>
+                  <span id="hp2_badge" class="hidden text-[10px] px-1.5 py-0.2 rounded bg-amber-500 text-slate-950">LƯỢT</span>
+                </div>
+              </td>
+              <td class="py-2 px-3 text-right font-mono font-black text-amber-300 text-base" id="hp2_round">0</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-200 text-sm" id="hp2_total">0</td>
+            </tr>
+
+            <!-- Row 4: Player 3 (Blue) -->
+            <tr id="playerRow3" class="transition-colors hover:bg-slate-800/30">
+              <td class="py-2 px-3">
+                <div class="flex items-center gap-2 truncate">
+                  <span class="w-3 h-3 rounded-full bg-blue-400 shadow-sm shadow-blue-400/50 flex-shrink-0"></span>
+                  <span class="font-extrabold text-blue-400 text-sm truncate" id="hp3_name">Người chơi 3</span>
+                  <span id="hp3_badge" class="hidden text-[10px] px-1.5 py-0.2 rounded bg-amber-500 text-slate-950">LƯỢT</span>
+                </div>
+              </td>
+              <td class="py-2 px-3 text-right font-mono font-black text-amber-300 text-base" id="hp3_round">0</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-200 text-sm" id="hp3_total">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BOTTOM RIGHT: TOPIC, CLUE, ANSWER & LETTER TRACKING -->
+    <div class="md:col-span-7 h-full flex flex-col bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 sm:p-3 shadow-xl overflow-y-auto space-y-2.5">
+      
+      <!-- Topic (Chủ đề) & Clue (Gợi ý) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-shrink-0">
+        <!-- Topic -->
+        <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800">
+          <div class="text-[10px] uppercase tracking-wider text-purple-400 font-bold mb-0.5">CHỦ ĐỀ:</div>
+          <div class="text-base sm:text-lg font-black text-amber-300 truncate" id="hostCategory">CHỦ ĐỀ</div>
+        </div>
+        <!-- Clue -->
+        <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">GỢI Ý CỦA MC:</div>
+          <div class="text-xs sm:text-sm font-semibold text-slate-200 line-clamp-2" id="hostClue">Không có gợi ý</div>
+        </div>
+      </div>
+
+      <!-- Answer (Đáp án dành cho MC) -->
+      <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex-shrink-0 space-y-1.5">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">ĐÁP ÁN Ô CHỮ (MC):</span>
+          <span class="text-[11px] text-slate-400">Đã mở: <strong class="text-emerald-400 font-mono" id="revealedCountRatio">0/0</strong></span>
+        </div>
+        <div class="flex flex-wrap gap-1.5 items-center justify-center min-h-[50px] p-2 bg-slate-900/50 rounded-lg" id="hostAnswerTiles">
+          <!-- Populated by JS -->
+        </div>
+        <div class="flex items-center justify-center gap-4 text-[10px] text-slate-400">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> Khán giả đã thấy</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-amber-400 text-amber-300 text-center font-bold text-[8px] leading-2 inline-block">A</span> Chỉ MC thấy</span>
+        </div>
+      </div>
+
+      <!-- Letter Tracking (Theo dõi chữ cái đã gọi) -->
+      <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex-shrink-0 space-y-1.5">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">THEO DÕI CHỮ CÁI ĐÃ GỌI:</span>
+          <span class="text-[10px] text-slate-500">Giúp MC nhắc người chơi</span>
+        </div>
+        <div class="flex flex-wrap gap-1" id="hostAlphabetTracker">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <script>
+    const socket = io();
+    const alphabet = 'AĂÂBCDĐEÊGHIKLMNOÔƠPQRSTUƯVXY'.split('');
+
+    socket.on('connect', () => {
+      socket.emit('state:request');
+    });
+
+    socket.on('game:state', (state) => {
+      updateHostUI(state);
+    });
+
+    // Tự động tải và đồng bộ trạng thái mới nhất ngay khi F5 / Reload / Vào muộn
+    fetch('/api/state')
+      .then(res => res.json())
+      .then(state => {
+        if (state) updateHostUI(state);
+      })
+      .catch(() => {});
+
+    function updateHostUI(state) {
+      if (!state) return;
+
+      // Round text
+      const roundEl = document.getElementById('currentRoundText');
+      if (roundEl) roundEl.innerText = state.currentRound || 'Vòng 1';
+
+      // Wheel active badge
+      const wheelBadge = document.getElementById('hostActiveWheel');
+      if (wheelBadge) wheelBadge.innerText = state.wheel.selectedWheel || 'vong7.png';
+
+      // Category & Clue
+      const catEl = document.getElementById('hostCategory');
+      if (catEl) catEl.innerText = state.puzzle.category || 'CHỦ ĐỀ';
+      const clueEl = document.getElementById('hostClue');
+      if (clueEl) clueEl.innerText = state.puzzle.clue || 'Không có gợi ý';
+
+      // Answer tiles render for Host
+      renderHostAnswer(state.puzzle.answer || '', state.puzzle.revealedIndices || []);
+
+      // 3 Players Table Rows
+      state.players.forEach(p => {
+        const id = p.id;
+        const nameEl = document.getElementById(`hp${id}_name`);
+        const roundScoreEl = document.getElementById(`hp${id}_round`);
+        const totalScoreEl = document.getElementById(`hp${id}_total`);
+        const rowEl = document.getElementById(`playerRow${id}`);
+        const badgeEl = document.getElementById(`hp${id}_badge`);
+
+        if (nameEl) nameEl.innerText = p.name || `Người chơi ${id}`;
+        if (roundScoreEl) roundScoreEl.innerText = Number(p.roundScore || 0).toLocaleString('vi-VN');
+        if (totalScoreEl) totalScoreEl.innerText = Number(p.totalScore || 0).toLocaleString('vi-VN');
+
+        if (p.canSpin) {
+          if (rowEl) rowEl.className = 'bg-amber-500/20 border-l-4 border-amber-400 transition-colors';
+          if (badgeEl) {
+            badgeEl.innerText = 'ĐƯỢC QUAY';
+            badgeEl.className = 'text-[10px] px-1.5 py-0.2 rounded bg-amber-500 text-slate-950 font-bold';
+            badgeEl.classList.remove('hidden');
+          }
+        } else if (p.buzzed || (state.buzzer && state.buzzer.winner === id)) {
+          const buzzBg = id === 1 ? 'bg-red-600/30 border-l-4 border-red-500' : (id === 2 ? 'bg-yellow-500/30 border-l-4 border-yellow-400' : 'bg-blue-600/30 border-l-4 border-blue-500');
+          if (rowEl) rowEl.className = `${buzzBg} transition-colors animate-pulse`;
+          if (badgeEl) {
+            badgeEl.innerText = 'CHUÔNG!';
+            const badgeBg = id === 1 ? 'bg-red-600 text-white' : (id === 2 ? 'bg-yellow-400 text-slate-950' : 'bg-blue-600 text-white');
+            badgeEl.className = `text-[10px] px-1.5 py-0.2 rounded ${badgeBg} font-bold animate-bounce`;
+            badgeEl.classList.remove('hidden');
+          }
+        } else {
+          if (rowEl) rowEl.className = 'transition-colors hover:bg-slate-800/30';
+          if (badgeEl) badgeEl.classList.add('hidden');
+        }
+      });
+
+      // Buzzer Alert Banner
+      const buzzBanner = document.getElementById('buzzerAlert');
+      if (state.buzzer && state.buzzer.winner) {
+        const winner = state.players.find(p => p.id === state.buzzer.winner);
+        document.getElementById('buzzerWinnerText').innerText = `${winner ? winner.name : 'Người chơi'} ĐÃ BẤM CHUÔNG!`;
+        document.getElementById('buzzerTimeText').innerText = winner ? (winner.buzzTime || '') : '';
+        buzzBanner.classList.remove('hidden');
+      } else {
+        buzzBanner.classList.add('hidden');
+      }
+
+      // Alphabet Tracker
+      renderAlphabetTracker(state.puzzle.revealedLetters || []);
+    }
+
+    function renderHostAnswer(answer, revealedIndices) {
+      const container = document.getElementById('hostAnswerTiles');
+      const ratioEl = document.getElementById('revealedCountRatio');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!answer) {
+        if (ratioEl) ratioEl.innerText = '0/0';
+        return;
+      }
+
+      const chars = answer.toUpperCase().split('');
+      let totalLetters = 0;
+      let totalRevealed = 0;
+
+      chars.forEach((char, index) => {
+        if (char === ' ') {
+          const space = document.createElement('div');
+          space.className = 'w-3 sm:w-4 h-8';
+          container.appendChild(space);
+        } else {
+          totalLetters++;
+          const isRevealed = revealedIndices.includes(index);
+          if (isRevealed) totalRevealed++;
+
+          const tile = document.createElement('div');
+          tile.className = `w-7 h-9 sm:w-8 sm:h-11 rounded flex items-center justify-center font-black text-sm sm:text-base shadow ${
+            isRevealed
+              ? 'bg-emerald-500 text-slate-950 ring-1 ring-emerald-300'
+              : 'bg-slate-800 border border-amber-400/50 text-amber-300 opacity-90'
+          }`;
+          tile.innerText = char;
+          container.appendChild(tile);
+        }
+      });
+
+      if (ratioEl) ratioEl.innerText = `${totalRevealed}/${totalLetters}`;
+    }
+
+    function renderAlphabetTracker(revealedLetters) {
+      const container = document.getElementById('hostAlphabetTracker');
+      if (!container) return;
+      container.innerHTML = '';
+
+      alphabet.forEach(letter => {
+        const isCalled = revealedLetters.includes(letter);
+        const item = document.createElement('div');
+        item.className = `w-6 h-6 sm:w-7 sm:h-7 rounded text-[11px] font-bold flex items-center justify-center transition ${
+          isCalled
+            ? 'bg-emerald-600 text-white ring-1 ring-emerald-400'
+            : 'bg-slate-800/80 text-slate-400 border border-slate-700/60'
+        }`;
+        item.innerText = letter;
+        container.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>

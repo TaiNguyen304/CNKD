@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bảng Ô Chữ - Chiếc Nón Kỳ Diệu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="/disableDevTools.js"></script>
+  <style>
+    :root {
+      --blue: blue;
+      --aqua: aqua;
+      --yellow: yellow;
+      --green: green;
+      --red: red;
+      --pink: #ff00cc;
+      --purple: purple;
+      --lime: #39ff14;
+      --black: #000000;
+      --white: #ffffff;
+      --light-blue: aqua;
+      --dark-blue: blue;
+      --orange: orange;
+    }
+    * {
+      font-weight: bold !important;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at center, #062b1b 0%, #03140c 70%, #010805 100%);
+      user-select: none;
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    button:hover:not(:disabled),
+    .btn-action:hover:not(:disabled),
+    .btn:hover:not(:disabled),
+    a:hover,
+    input[type="button"]:hover:not(:disabled),
+    input[type="submit"]:hover:not(:disabled),
+    [role="button"]:hover {
+      background: orange !important;
+      background-color: orange !important;
+      color: #000000 !important;
+      border-color: orange !important;
+    }
+    button:hover:not(:disabled) *,
+    .btn-action:hover:not(:disabled) *,
+    .btn:hover:not(:disabled) *,
+    a:hover * {
+      color: #000000 !important;
+    }
+
+    /* KHÔNG CÓ BẤT KỲ ANIMATION HOẶC TRANSITION NÀO KHI ĐỔI TRẠNG THÁI */
+    *, *::before, *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+
+    /* BỎ TOÀN BỘ BO GÓC TRÊN Ô CHỮ VÀ KHUNG (Ô CHỮ BỎ BO GÓC) - MÀU TÍM #800080 MẶC ĐỊNH */
+    .studio-frame-square {
+      border: 8px solid #800080;
+      box-shadow: 0 0 35px rgba(128, 0, 128, 0.45), inset 0 0 20px rgba(0,0,0,0.8);
+      border-radius: 0px !important;
+    }
+
+    /* 4 TRẠNG THÁI Ô CHỮ THEO YÊU CẦU:
+       1. Ô default: Giữ nguyên
+       2. Ô chưa mở: Màu trắng
+       3. Ô đánh dấu: Màu blue
+       4. Ô có chữ: Màu trắng (với chữ màu đen)
+    */
+
+    /* 1. Ô default: Giữ nguyên nền xanh sân khấu */
+    .cell-default {
+      background: linear-gradient(135deg, #09472e 0%, #042416 100%);
+      border: 1.5px solid #0f6341;
+      border-radius: 0px !important;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.6);
+    }
+
+    /* 2. Ô chưa mở: Màu trắng */
+    .cell-unrevealed {
+      background: #ffffff !important;
+      border: 2px solid #94a3b8 !important;
+      border-radius: 0px !important;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    /* 3. Ô đánh dấu: Màu blue */
+    .cell-marked {
+      background: #2563eb !important;
+      border: 2px solid #60a5fa !important;
+      border-radius: 0px !important;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* 4. Ô có chữ: Màu trắng */
+    .cell-revealed {
+      background: #ffffff !important;
+      border: 2px solid #1e293b !important;
+      border-radius: 0px !important;
+      color: #000000 !important;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden !important; background-color: #020617; user-select: none;" class="text-slate-100">
+
+  <!-- AUTO-SCALING VIEWPORT CONTAINER: ENSURES 100% VISIBILITY WITH ZERO SCROLLING ON HOST, PLAYER & PROJECTOR -->
+  <div id="puzzleStageViewport" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+    <div id="puzzleStageContent" style="width: 1160px; height: 640px; flex-shrink: 0; transform-origin: center center; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative;">
+
+      <!-- Category Banner Display (Chủ đề ô chữ, bỏ bo góc) -->
+      <div id="categoryBanner" style="text-align: center; margin-bottom: 8px;">
+        <div id="categoryBannerTag" style="display: inline-block; padding: 6px 36px; background: linear-gradient(to right, #f59e0b, #facc15, #f59e0b); color: #020617; font-weight: 900; font-size: 22px; border: 2px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.6);" class="rounded-none">
+          CHỦ ĐỀ: <span id="categoryTitle">DANH LAM THẮNG CẢNH</span>
+        </div>
+        <div id="clueText" style="margin-top: 4px; font-size: 13px; color: #cbd5e1; font-weight: 700; font-style: italic;">
+          <!-- Clue from controller if any -->
+        </div>
+      </div>
+
+      <!-- STATE A: TOPIC SELECTION DISPLAY ("Chọn 1 trong 3 chủ đề", Bỏ bo góc) -->
+      <div id="topicSelectionScreen" style="width: 1066px; padding: 20px; background: rgba(2,6,23,0.95); border: 4px solid rgba(245, 158, 11, 0.6); box-shadow: 0 20px 40px rgba(0,0,0,0.8);" class="space-y-4 hidden rounded-none">
+        <div class="text-center space-y-1">
+          <div class="inline-flex items-center gap-2 px-4 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-black rounded-none">
+            LỰA CHỌN CHỦ ĐỀ
+          </div>
+          <h2 class="text-2xl font-black text-white">CHỌN 1 TRONG 3 CHỦ ĐỀ</h2>
+          <p class="text-xs text-slate-300 font-bold">Người chơi vui lòng chọn một chủ đề để mở ô chữ</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 pt-2" id="topicSelectionCards">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <div class="text-center pt-2">
+          <span class="text-xs text-amber-400 font-bold animate-pulse">
+            * Đang chờ Controller xác nhận lựa chọn của người chơi...
+          </span>
+        </div>
+      </div>
+
+      <!-- STATE B: Ô CHỮ CÓ 4 HÀNG, MỖI HÀNG 16 Ô (4 x 16 = 64 Ô, BỎ BO GÓC) -->
+      <div id="puzzleBoardContainer" class="studio-frame-square bg-[#042416] shadow-2xl relative overflow-hidden rounded-none" style="padding: 14px 18px; border: 8px solid #800080;">
+        <div id="boardGrid" style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+          <!-- 4 Hàng, mỗi hàng 16 ô -->
+        </div>
+      </div>
+
+      <!-- Bottom Player Podiums (Bỏ bo góc) -->
+      <footer id="boardFooter" style="width: 1066px; border-top: 1px solid rgba(6, 95, 70, 0.6); padding-top: 8px;">
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <!-- Player 1 -->
+          <div id="p1_podium" class="p-2 bg-purple-900/80 border border-purple-400/60 shadow rounded-none">
+            <div class="flex items-center justify-center gap-1.5 text-xs text-purple-200 mb-0.5">
+              <span id="p1_name" class="text-white font-black">Người chơi 1</span>
+            </div>
+            <div class="text-xl font-black text-white font-mono" id="p1_score">0</div>
+          </div>
+
+          <!-- Player 2 -->
+          <div id="p2_podium" class="p-2 bg-purple-900/80 border border-purple-400/60 shadow rounded-none">
+            <div class="flex items-center justify-center gap-1.5 text-xs text-purple-200 mb-0.5">
+              <span id="p2_name" class="text-white font-black">Người chơi 2</span>
+            </div>
+            <div class="text-xl font-black text-white font-mono" id="p2_score">0</div>
+          </div>
+
+          <!-- Player 3 -->
+          <div id="p3_podium" class="p-2 bg-purple-900/80 border border-purple-400/60 shadow rounded-none">
+            <div class="flex items-center justify-center gap-1.5 text-xs text-purple-200 mb-0.5">
+              <span id="p3_name" class="text-white font-black">Người chơi 3</span>
+            </div>
+            <div class="text-xl font-black text-white font-mono" id="p3_score">0</div>
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    // STRICT SPECIFICATION: Ô CHỮ CÓ 4 HÀNG, MỖI HÀNG 16 Ô (4 x 16 = 64 Ô)
+    const ROWS_COUNT = 4;
+    const COLS_PER_ROW = 16;
+
+    let currentBoardState = 'hidden';
+    let currentAnswer = '';
+    let currentRevealedIndices = [];
+    let currentMarkedIndices = [];
+
+    // Socket Event: game:state
+    socket.on('connect', () => {
+      socket.emit('state:request');
+    });
+
+    socket.on('game:state', (state) => {
+      if (!state) return;
+      renderState(state);
+    });
+
+    // Tự động tải và đồng bộ ô chữ mới nhất ngay khi F5 / Reload / Vào muộn
+    fetch('/api/state')
+      .then(res => res.json())
+      .then(state => {
+        if (state) renderState(state);
+      })
+      .catch(() => {});
+
+    function triggerConfettiCelebration() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    function renderState(state) {
+      // Category & Clue Visibility
+      const isCatVisible = state.puzzle.showCategory !== false;
+      const isClueVisible = state.puzzle.showClue !== false;
+
+      const catBanner = document.getElementById('categoryBanner');
+      const catTag = document.getElementById('categoryBannerTag');
+      if (catTag) {
+        catTag.style.display = isCatVisible ? 'inline-block' : 'none';
+      }
+      const catTitle = document.getElementById('categoryTitle');
+      if (catTitle) catTitle.innerText = state.puzzle.category || 'CHỦ ĐỀ';
+
+      const clueText = document.getElementById('clueText');
+      if (clueText) {
+        clueText.style.display = isClueVisible ? 'block' : 'none';
+        clueText.innerText = state.puzzle.clue ? `"${state.puzzle.clue}"` : '';
+      }
+
+      if (catBanner) {
+        if (!isCatVisible && !isClueVisible) {
+          catBanner.style.display = 'none';
+        } else {
+          catBanner.style.display = 'block';
+        }
+      }
+
+      // Check Topic Selection Screen mode ("phải chọn chủ đề thì ô chữ mới hiện ra")
+      const topicScreen = document.getElementById('topicSelectionScreen');
+      const boardContainer = document.getElementById('puzzleBoardContainer');
+
+      if (state.topicSelection && state.topicSelection.active && state.topicSelection.mode === 'choose_topic') {
+        // Show the 3 topics, hide the puzzleboard
+        if (topicScreen) {
+          topicScreen.classList.remove('hidden');
+          renderTopicSelectionCards(state.topicSelection.topics || []);
+        }
+        if (boardContainer) boardContainer.classList.add('hidden');
+        if (catBanner) catBanner.classList.add('hidden');
+      } else {
+        // Topic chosen or fixed puzzle selected: show board!
+        if (topicScreen) topicScreen.classList.add('hidden');
+        if (boardContainer) boardContainer.classList.remove('hidden');
+        if (catBanner) catBanner.classList.remove('hidden');
+
+        currentBoardState = state.puzzle.boardState;
+        currentAnswer = state.puzzle.answer || '';
+        currentGridMatrix = state.puzzle.gridMatrix || null;
+        currentRevealedIndices = state.puzzle.revealedIndices || [];
+        currentMarkedIndices = state.puzzle.markedIndices || [];
+
+        renderBoard(currentAnswer, currentBoardState, currentRevealedIndices, currentMarkedIndices, currentGridMatrix);
+      }
+
+      // Sync Màu viền ô chữ (Khung màu tím #800080 mặc định, đổi sang đỏ/vàng/xanh khi bấm chuông hoặc chọn màu từ Controller)
+      const currentBorderColor = (state.puzzle && state.puzzle.borderColor) ? state.puzzle.borderColor : '#800080';
+      if (boardContainer) {
+        boardContainer.style.borderColor = currentBorderColor;
+        boardContainer.style.boxShadow = `0 0 35px ${currentBorderColor}80, inset 0 0 20px rgba(0,0,0,0.8)`;
+      }
+
+      // Render Players Podiums (Khi Mở quay cho Player, ô điểm trên Puzzleboard KHÔNG được đổi màu - Giữ màu tím mặc định, chỉ đổi màu khi bấm chuông)
+      if (state.players) {
+        const buzzedWinner = (state.buzzer && state.buzzer.winner) ? state.buzzer.winner : null;
+
+        state.players.forEach(p => {
+          const id = p.id;
+          const nameEl = document.getElementById(`p${id}_name`);
+          const scoreEl = document.getElementById(`p${id}_score`);
+          const podium = document.getElementById(`p${id}_podium`);
+
+          if (nameEl) nameEl.innerText = p.name;
+          if (scoreEl) scoreEl.innerText = Number(p.roundScore || 0).toLocaleString('vi-VN');
+
+          if (podium) {
+            if (buzzedWinner === id || p.buzzed) {
+              // Bấm chuông: P1 Đỏ, P2 Vàng, P3 Xanh
+              if (id === 1) {
+                podium.className = 'p-2 bg-red-600 border-2 border-red-300 shadow-xl rounded-none animate-pulse';
+                if (nameEl) nameEl.className = 'text-white font-black';
+                if (scoreEl) scoreEl.className = 'text-2xl font-black text-white font-mono';
+              } else if (id === 2) {
+                podium.className = 'p-2 bg-yellow-400 border-2 border-yellow-200 shadow-xl rounded-none animate-pulse';
+                if (nameEl) nameEl.className = 'text-slate-950 font-black';
+                if (scoreEl) scoreEl.className = 'text-2xl font-black text-slate-950 font-mono';
+              } else if (id === 3) {
+                podium.className = 'p-2 bg-blue-600 border-2 border-blue-300 shadow-xl rounded-none animate-pulse';
+                if (nameEl) nameEl.className = 'text-white font-black';
+                if (scoreEl) scoreEl.className = 'text-2xl font-black text-white font-mono';
+              }
+            } else {
+              // Default: Màu tím, chữ đậm trắng (khi mở quay cũng giữ màu tím này)
+              podium.className = 'p-2 bg-purple-900/90 border border-purple-400/80 shadow rounded-none';
+              if (nameEl) nameEl.className = 'text-white font-black';
+              if (scoreEl) scoreEl.className = 'text-2xl font-black text-white font-mono';
+            }
+          }
+        });
+      }
+
+      fitStage();
+    }
+
+    function renderTopicSelectionCards(topics = []) {
+      const container = document.getElementById('topicSelectionCards');
+      if (!container) return;
+      container.innerHTML = '';
+
+      topics.forEach((t, idx) => {
+        const card = document.createElement('div');
+        card.className = 'p-5 bg-slate-900 border-2 border-amber-500/50 shadow-xl text-center space-y-3 rounded-none';
+        card.innerHTML = `
+          <div class="w-12 h-12 bg-amber-500/20 text-amber-300 mx-auto flex items-center justify-center font-black text-lg rounded-none">
+            ${idx + 1}
+          </div>
+          <h3 class="text-base font-black text-amber-300 uppercase tracking-wide">${t.category}</h3>
+          <p class="text-xs text-slate-400 font-bold">Chủ đề số ${idx + 1}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Generate 4x16 grid layout based on gridMatrix or wrap answer
+    function layoutAnswerOn16x4Board(answer, boardState, gridMatrix = null) {
+      // Initialize 4 rows of 16 default cells
+      const grid = Array.from({ length: 4 }, () =>
+        Array.from({ length: 16 }, () => ({
+          isLetter: false,
+          char: '',
+          index: -1
+        }))
+      );
+
+      if (boardState === 'hidden' || boardState === 'cleared') {
+        return grid;
+      }
+
+      // If exact gridMatrix is provided from Excel, use exact coordinates!
+      if (gridMatrix && Array.isArray(gridMatrix) && gridMatrix.length === 4) {
+        let hasAnyLetter = false;
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 16; c++) {
+            const ch = (gridMatrix[r] && gridMatrix[r][c]) ? String(gridMatrix[r][c]).trim() : '';
+            if (ch) {
+              hasAnyLetter = true;
+              grid[r][c] = {
+                isLetter: true,
+                char: ch.toUpperCase(),
+                index: r * 16 + c
+              };
+            } else {
+              grid[r][c] = {
+                isLetter: false,
+                char: '',
+                index: r * 16 + c
+              };
+            }
+          }
+        }
+        if (hasAnyLetter) {
+          return grid;
+        }
+      }
+
+      if (!answer) {
+        return grid;
+      }
+
+      const words = answer.trim().split(/\s+/).filter(w => w.length > 0);
+      const rows = [[], [], [], []];
+      let curRow = 0;
+      let curLen = 0;
+
+      for (let w = 0; w < words.length; w++) {
+        const word = words[w];
+        const needed = curLen === 0 ? word.length : word.length + 1;
+
+        if (curLen + needed <= 16) {
+          rows[curRow].push(word);
+          curLen += needed;
+        } else {
+          curRow++;
+          if (curRow >= 4) {
+            curRow = 3;
+            rows[curRow].push(word);
+          } else {
+            rows[curRow].push(word);
+            curLen = word.length;
+          }
+        }
+      }
+
+      // Vertical centering if fewer than 4 rows used
+      const activeRows = rows.filter(r => r.length > 0);
+      const usedCount = activeRows.length;
+      let startRow = 0;
+      if (usedCount === 1) startRow = 1;
+      else if (usedCount === 2) startRow = 1;
+      else if (usedCount === 3) startRow = 0;
+
+      for (let r = 0; r < usedCount; r++) {
+        const targetRowIdx = startRow + r;
+        if (targetRowIdx >= 4) break;
+
+        const rowWords = rows[r];
+        const textInRow = rowWords.join(' ');
+        const leftPad = Math.max(0, Math.floor((16 - textInRow.length) / 2));
+
+        let charIdx = 0;
+        for (let c = 0; c < 16; c++) {
+          if (c >= leftPad && charIdx < textInRow.length) {
+            const ch = textInRow[charIdx];
+            charIdx++;
+
+            const cellIdx = targetRowIdx * 16 + c;
+            if (ch === ' ') {
+              grid[targetRowIdx][c] = {
+                isLetter: false,
+                char: '',
+                index: cellIdx
+              };
+            } else {
+              grid[targetRowIdx][c] = {
+                isLetter: true,
+                char: ch.toUpperCase(),
+                index: cellIdx
+              };
+            }
+          } else {
+            grid[targetRowIdx][c] = {
+              isLetter: false,
+              char: '',
+              index: targetRowIdx * 16 + c
+            };
+          }
+        }
+      }
+
+      return grid;
+    }
+
+    // Không hiện dấu thanh hỏi, sắc, huyền, ngã, nặng khi mở ô chữ
+    function removeToneMarks(str) {
+      if (!str) return '';
+      const toneMap = {
+        'Á':'A','À':'A','Ả':'A','Ã':'A','Ạ':'A',
+        'Ắ':'Ă','Ằ':'Ă','Ẳ':'Ă','Ẵ':'Ă','Ặ':'Ă',
+        'Ấ':'Â','Ầ':'Â','Ẩ':'Â','Ẫ':'Â','Ậ':'Â',
+        'É':'E','È':'E','Ẻ':'E','Ẽ':'E','Ẹ':'E',
+        'Ế':'Ê','Ề':'Ê','Ể':'Ê','Ễ':'Ê','Ệ':'Ê',
+        'Í':'I','Ì':'I','Ỉ':'I','Ĩ':'I','Ị':'I',
+        'Ó':'O','Ò':'O','Ỏ':'O','Õ':'O','Ọ':'O',
+        'Ố':'Ô','Ồ':'Ô','Ổ':'Ô','Ỗ':'Ô','Ộ':'Ô',
+        'Ớ':'Ơ','Ờ':'Ơ','Ở':'Ơ','Ỡ':'Ơ','Ợ':'Ơ',
+        'Ú':'U','Ù':'U','Ủ':'U','Ũ':'U','Ụ':'U',
+        'Ứ':'Ư','Ừ':'Ư','Ử':'Ư','Ữ':'Ư','Ự':'Ư',
+        'Ý':'Y','Ỳ':'Y','Ỷ':'Y','Ỹ':'Y','Ỵ':'Y'
+      };
+      return str.split('').map(c => toneMap[c.toUpperCase()] || c.toUpperCase()).join('');
+    }
+
+    // Render Board strictly adhering to:
+    // "Ô chữ có 4 hàng, mỗi hàng 16 ô.
+    //  Ô chữ bỏ bo góc.
+    //  Điều chỉnh trạng thái của ô chữ:
+    //  - Ô default: Giữ nguyên
+    //  - Ô chưa mở: Màu trắng
+    //  - Ô đánh dấu: Màu blue
+    //  - Ô có chữ: Màu trắng.
+    //  Khi đổi trạng thái, không có bất kỳ animation nào."
+    function renderBoard(answer, boardState, revealedIndices = [], markedIndices = [], gridMatrix = null) {
+      const boardGrid = document.getElementById('boardGrid');
+      if (!boardGrid) return;
+      boardGrid.innerHTML = '';
+
+      const gridData = layoutAnswerOn16x4Board(answer, boardState, gridMatrix);
+
+      for (let r = 0; r < ROWS_COUNT; r++) {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'flex gap-[6px] justify-center w-full';
+
+        for (let c = 0; c < COLS_PER_ROW; c++) {
+          const cell = gridData[r][c];
+          const cellEl = document.createElement('div');
+
+          // Fixed cell dimensions inside auto-scaling 1160px canvas
+          cellEl.className = 'w-[58px] h-[78px] flex items-center justify-center select-none rounded-none flex-shrink-0';
+
+          if (!cell.isLetter || boardState === 'hidden' || boardState === 'cleared') {
+            // TRẠNG THÁI 1: Ô default: Giữ nguyên (nền xanh sân khấu)
+            cellEl.innerHTML = `<div class="w-full h-full cell-default"></div>`;
+          } else {
+            // Cell belongs to the puzzle word
+            const isRevealed = (boardState === 'revealed') || revealedIndices.includes(cell.index);
+            const isMarked = !isRevealed && (markedIndices.includes(cell.index));
+
+            if (isRevealed) {
+              // TRẠNG THÁI 4: Ô có chữ: Màu trắng (chữ màu đen, không có animation, Không hiện dấu thanh hỏi, sắc, huyền, ngã, nặng)
+              cellEl.innerHTML = `
+                <div class="w-full h-full cell-revealed flex items-center justify-center">
+                  <span class="text-slate-950 font-black text-3xl font-mono leading-none">${removeToneMarks(cell.char)}</span>
+                </div>
+              `;
+            } else if (isMarked) {
+              // TRẠNG THÁI 3: Ô đánh dấu: Màu blue (không có animation)
+              cellEl.innerHTML = `<div class="w-full h-full cell-marked"></div>`;
+            } else {
+              // TRẠNG THÁI 2: Ô chưa mở: Màu trắng (không có animation)
+              cellEl.innerHTML = `<div class="w-full h-full cell-unrevealed"></div>`;
+            }
+          }
+
+          rowEl.appendChild(cellEl);
+        }
+
+        boardGrid.appendChild(rowEl);
+      }
+
+      fitStage();
+    }
+
+    // Dynamic auto-scale stage function: guarantees NO SCROLLING vertically or horizontally
+    function fitStage() {
+      const content = document.getElementById('puzzleStageContent');
+      if (!content) return;
+      const baseW = 1160;
+      const baseH = 640;
+      const availW = window.innerWidth || document.documentElement.clientWidth;
+      const availH = window.innerHeight || document.documentElement.clientHeight;
+      if (!availW || !availH) return;
+      // Fit uniformly inside the viewport with a small safety margin
+      const scale = Math.min((availW * 0.98) / baseW, (availH * 0.98) / baseH);
+      content.style.transform = `scale(${scale})`;
+    }
+
+    window.addEventListener('resize', fitStage);
+    window.addEventListener('DOMContentLoaded', fitStage);
+    window.addEventListener('load', fitStage);
+    setTimeout(fitStage, 50);
+  </script>
+</body>
+</html>

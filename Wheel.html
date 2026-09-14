@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chiếc Nón Kỳ Diệu - Wheel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/disableDevTools.js"></script>
+  <style>
+    :root {
+      --blue: blue;
+      --aqua: aqua;
+      --yellow: yellow;
+      --green: green;
+      --red: red;
+      --pink: #ff00cc;
+      --purple: purple;
+      --lime: #39ff14;
+      --black: #000000;
+      --white: #ffffff;
+      --light-blue: aqua;
+      --dark-blue: blue;
+      --orange: orange;
+    }
+    * {
+      font-weight: bold !important;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button:hover:not(:disabled),
+    .btn-action:hover:not(:disabled),
+    .btn:hover:not(:disabled),
+    a:hover,
+    input[type="button"]:hover:not(:disabled),
+    input[type="submit"]:hover:not(:disabled),
+    [role="button"]:hover {
+      background: orange !important;
+      background-color: orange !important;
+      color: #000000 !important;
+      border-color: orange !important;
+    }
+    button:hover:not(:disabled) *,
+    .btn-action:hover:not(:disabled) *,
+    .btn:hover:not(:disabled) *,
+    a:hover * {
+      color: #000000 !important;
+    }
+    .clacker-anim {
+      transform-origin: top center;
+      transition: transform 0.04s ease-out;
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden !important; background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%); user-select: none;" class="text-slate-100">
+
+  <!-- AUTO-SCALING VIEWPORT CONTAINER: ENSURES 100% VISIBILITY WITH ZERO SCROLLING ON HOST, PLAYER & PROJECTOR -->
+  <div id="wheelStageViewport" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+    <div id="wheelStageContent" style="width: 780px; height: 850px; flex-shrink: 0; transform-origin: center center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+
+      <!-- WHEEL & 3 POINTERS CONTAINER -->
+      <div style="position: relative; width: 760px; height: 760px; display: flex; align-items: center; justify-content: center;">
+        
+        <!-- WHEEL CANVAS (HOÀN TOÀN KHÔNG CÓ BẤT KỲ TEXT HAY SHAPE NÀO) -->
+        <canvas id="wheelCanvas" width="760" height="760" style="width: 760px; height: 760px; border-radius: 9999px; display: block;"></canvas>
+
+        <!-- 3 POINTERS CỦA CHIẾC NÓN KỲ DIỆU (CHĨA THẲNG VÀO TÂM NÓN) -->
+        <div style="position: absolute; inset: 0; width: 760px; height: 760px; pointer-events: none; z-index: 30;">
+          
+          <!-- Kim 1: Bên trái Kim 2 (-30 độ), chĩa thẳng vào tâm nón -->
+          <div id="pointerHolder1" style="position: absolute; left: 380px; top: 380px; width: 0; height: 0; transform: rotate(-30deg);">
+            <div id="pointerWrapper1" class="clacker-anim" style="position: absolute; top: -410px; left: -50px; width: 100px; transform-origin: top center;">
+              <img id="pointerImg1" src="/pointer1.png" alt="Kim 1 (Đỏ)" style="width: 100%; height: auto;" class="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]">
+            </div>
+          </div>
+
+          <!-- Kim 2: Ở giữa (0 độ), chĩa thẳng vào tâm nón -->
+          <div id="pointerHolder2" style="position: absolute; left: 380px; top: 380px; width: 0; height: 0; transform: rotate(0deg);">
+            <div id="pointerWrapper2" class="clacker-anim" style="position: absolute; top: -410px; left: -50px; width: 100px; transform-origin: top center;">
+              <img id="pointerImg2" src="/pointer2.png" alt="Kim 2 (Vàng)" style="width: 100%; height: auto;" class="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]">
+            </div>
+          </div>
+
+          <!-- Kim 3: Bên phải Kim 2 (+30 độ), chĩa thẳng vào tâm nón -->
+          <div id="pointerHolder3" style="position: absolute; left: 380px; top: 380px; width: 0; height: 0; transform: rotate(30deg);">
+            <div id="pointerWrapper3" class="clacker-anim" style="position: absolute; top: -410px; left: -50px; width: 100px; transform-origin: top center;">
+              <img id="pointerImg3" src="/pointer3.png" alt="Kim 3 (Xanh)" style="width: 100%; height: auto;" class="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]">
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 3 Pointers Elements
+    const pointerWrapper1 = document.getElementById('pointerWrapper1');
+    const pointerWrapper2 = document.getElementById('pointerWrapper2');
+    const pointerWrapper3 = document.getElementById('pointerWrapper3');
+    const pointerHolder1 = document.getElementById('pointerHolder1');
+    const pointerHolder2 = document.getElementById('pointerHolder2');
+    const pointerHolder3 = document.getElementById('pointerHolder3');
+    const pointerImg1 = document.getElementById('pointerImg1');
+    const pointerImg2 = document.getElementById('pointerImg2');
+    const pointerImg3 = document.getElementById('pointerImg3');
+
+    // Check if player view, host view, or zoom query param requested
+    const urlParams = new URLSearchParams(window.location.search);
+    const isZoomPointer = urlParams.get('zoom') === 'pointer' || urlParams.get('zoom') === 'pointers' || urlParams.get('zoom') === 'top' || urlParams.get('zoom') === 'yellow' || urlParams.get('view') === 'player' || urlParams.get('view') === 'host';
+
+    // Dynamic auto-scale wheel function: guarantees NO SCROLLING vertically or horizontally
+    function autoScaleWheel() {
+      const content = document.getElementById('wheelStageContent');
+      if (!content) return;
+      const baseW = 780;
+      const baseH = 850;
+      const availW = window.innerWidth || document.documentElement.clientWidth;
+      const availH = window.innerHeight || document.documentElement.clientHeight;
+      if (!availW || !availH) return;
+
+      if (isZoomPointer) {
+        // Zoom chuẩn thấy được toàn bộ nửa trên của cái Nón và 3 kim (Kim 1 đỏ, Kim 2 vàng, Kim 3 xanh)
+        const zoomScale = Math.min((availW * 0.98) / 780, (availH * 0.98) / 440);
+        content.style.position = 'absolute';
+        content.style.left = '50%';
+        content.style.top = '50%';
+        content.style.transformOrigin = '390px 230px';
+        content.style.transform = `translate(-390px, -230px) scale(${zoomScale})`;
+      } else {
+        content.style.position = 'relative';
+        content.style.left = 'auto';
+        content.style.top = 'auto';
+        const scale = Math.min((availW * 0.98) / baseW, (availH * 0.98) / baseH);
+        content.style.transformOrigin = 'center center';
+        content.style.transform = `scale(${scale})`;
+      }
+    }
+
+    window.addEventListener('resize', autoScaleWheel);
+    window.addEventListener('DOMContentLoaded', autoScaleWheel);
+    window.addEventListener('load', autoScaleWheel);
+    setTimeout(autoScaleWheel, 50);
+
+    const numPegs = 24;
+    const arc = (2 * Math.PI) / numPegs;
+
+    let currentAngle = 0;
+    let isSpinning = false;
+    let spinStartTime = null;
+    let spinStartAngle = 0;
+    let spinFinalAngle = 0;
+    let spinDuration = 22000; // Strictly 22s
+    let lastTickSector = -1;
+
+    // Preload and cache wheel graphic textures
+    const wheelImages = {};
+    let activeWheelImage = null;
+    let currentWheelId = 'vong7.png';
+
+    const allWheelFiles = ['vong7.png', 'vong13.png', 'vong14.png', 'vong18.png', 'vong19.png', 'vong23.png'];
+    allWheelFiles.forEach(file => {
+      const img = new Image();
+      img.src = `/${file}`;
+      img.onload = () => {
+        wheelImages[file] = img;
+        if (currentWheelId === file) {
+          activeWheelImage = img;
+          drawWheel();
+        }
+      };
+    });
+
+    function loadWheelImage(wheelId) {
+      currentWheelId = wheelId;
+      if (wheelImages[wheelId] && wheelImages[wheelId].complete) {
+        activeWheelImage = wheelImages[wheelId];
+        drawWheel();
+      } else {
+        const img = new Image();
+        img.src = `/${wheelId}`;
+        img.onload = () => {
+          wheelImages[wheelId] = img;
+          if (currentWheelId === wheelId) {
+            activeWheelImage = img;
+            drawWheel();
+          }
+        };
+      }
+    }
+
+    // Set default wheel
+    loadWheelImage('vong7.png');
+
+    // Draw the authentic wheel - HOÀN TOÀN KHÔNG CÓ BẤT KỲ TEXT HAY SHAPE NÀO TRÊN WHEEL
+    function drawWheel() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const radius = cx;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(currentAngle);
+
+      if (activeWheelImage && activeWheelImage.complete && activeWheelImage.naturalWidth > 0) {
+        // Draw authentic graphic wheel texture (1080x1080 square from center of 1920x1080 image)
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+        ctx.clip();
+
+        const w = activeWheelImage.naturalWidth;
+        const h = activeWheelImage.naturalHeight;
+        const srcCx = w / 2;
+        const srcCy = h / 2;
+        const srcSize = Math.min(w, h);
+
+        ctx.drawImage(
+          activeWheelImage,
+          srcCx - srcSize / 2,
+          srcCy - srcSize / 2,
+          srcSize,
+          srcSize,
+          -radius,
+          -radius,
+          radius * 2,
+          radius * 2
+        );
+        ctx.restore();
+      } else {
+        // Fallback clean neutral disk while texture loads (BỎ HOÀN TOÀN CÁC Ô CHỨA TEXT)
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = '#0f172a';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#334155';
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // Smooth Quartic Ease-Out: completely eliminates jitter at the final second
+    function easeOutQuartic(t) {
+      const inv = 1 - t;
+      return 1 - inv * inv * inv * inv;
+    }
+
+    function animateSpin(now) {
+      if (!isSpinning) return;
+      if (!spinStartTime) spinStartTime = now;
+
+      const elapsed = now - spinStartTime;
+      const progress = Math.min(1, elapsed / spinDuration);
+
+      const ease = easeOutQuartic(progress);
+      currentAngle = spinStartAngle + (spinFinalAngle - spinStartAngle) * ease;
+
+      // Pointer Clacker Tick Animation
+      const tickIndex = Math.floor(Math.abs(currentAngle) / arc) % numPegs;
+      if (tickIndex !== lastTickSector) {
+        lastTickSector = tickIndex;
+        [
+          { wrapper: pointerWrapper1, holder: pointerHolder1 },
+          { wrapper: pointerWrapper2, holder: pointerHolder2 },
+          { wrapper: pointerWrapper3, holder: pointerHolder3 }
+        ].forEach(p => {
+          if (p.wrapper && p.holder && p.holder.style.display !== 'none') {
+            p.wrapper.style.transform = 'rotate(-18deg)';
+          }
+        });
+
+        setTimeout(() => {
+          if (isSpinning) {
+            [pointerWrapper1, pointerWrapper2, pointerWrapper3].forEach(w => {
+              if (w) w.style.transform = 'rotate(0deg)';
+            });
+          }
+        }, 35);
+      }
+
+      drawWheel();
+
+      if (progress < 1) {
+        requestAnimationFrame(animateSpin);
+      } else {
+        // Spin Finished after exactly 22 seconds! Dừng mượt mà tuyệt đối ở spinFinalAngle
+        isSpinning = false;
+        currentAngle = spinFinalAngle;
+        [pointerWrapper1, pointerWrapper2, pointerWrapper3].forEach(w => {
+          if (w) w.style.transform = 'rotate(0deg)';
+        });
+        drawWheel();
+
+        socket.emit('wheel:landed', {});
+      }
+    }
+
+    // Socket Event: wheel:start_spin - Đồng bộ góc quay và góc dừng trên tất cả các máy
+    socket.on('wheel:start_spin', (data) => {
+      isSpinning = true;
+      spinStartTime = performance.now();
+      spinStartAngle = ((data.startAngle !== undefined ? data.startAngle : 0) * Math.PI) / 180;
+      spinFinalAngle = ((data.finalAngle !== undefined ? data.finalAngle : (data.targetAngle || 0)) * Math.PI) / 180;
+      spinDuration = data.duration || 22000; // 22 seconds
+
+      // Switch wheel graphic if requested
+      if (data.selectedWheel && data.selectedWheel !== currentWheelId) {
+        currentWheelId = data.selectedWheel;
+        loadWheelImage(currentWheelId);
+      }
+
+      requestAnimationFrame(animateSpin);
+    });
+
+    // Socket Event: game:state updates - Đảm bảo nón dừng ở góc nào cũng giống nhau trên tất cả các máy
+    function syncWheelState(state) {
+      if (!state || !state.wheel) return;
+
+      if (state.wheel.selectedWheel && state.wheel.selectedWheel !== currentWheelId) {
+        currentWheelId = state.wheel.selectedWheel;
+        loadWheelImage(currentWheelId);
+      }
+
+      // If already spinning locally, let the animation finish smoothly without interruption!
+      if (isSpinning) {
+        return;
+      }
+
+      // Đồng bộ quay nếu máy mở trúng lúc đang quay
+      if (state.wheel.spinning && state.wheel.startTime && state.wheel.finalAngle !== undefined) {
+        const nowMs = Date.now();
+        const elapsed = nowMs - state.wheel.startTime;
+        const totalDuration = state.wheel.duration || 22000;
+        if (elapsed < totalDuration) {
+          spinStartAngle = ((state.wheel.startAngle || 0) * Math.PI) / 180;
+          spinFinalAngle = ((state.wheel.finalAngle || 0) * Math.PI) / 180;
+          spinDuration = totalDuration;
+          spinStartTime = performance.now() - elapsed;
+          isSpinning = true;
+          requestAnimationFrame(animateSpin);
+          return;
+        }
+      }
+
+      // Khi đứng yên hoặc nón đã quay xong: hiển thị đúng góc dừng chuẩn từ máy chủ
+      isSpinning = false;
+      const targetDeg = state.wheel.currentAngle !== undefined ? state.wheel.currentAngle : (state.wheel.finalAngle || 0);
+      currentAngle = (targetDeg * Math.PI) / 180;
+      drawWheel();
+
+      // Cập nhật đèn và trạng thái hiển thị 3 kim
+      if (state.wheel.pointers) {
+        const p1 = state.wheel.pointers.p1 || { light: true, visible: true };
+        const p2 = state.wheel.pointers.p2 || { light: true, visible: true };
+        const p3 = state.wheel.pointers.p3 || { light: true, visible: true };
+
+        // Kim 1 (Đỏ - Trái): Bật -> pointer1.png, Tắt -> pointer4.png
+        if (pointerImg1) pointerImg1.src = (p1.light !== false) ? '/pointer1.png' : '/pointer4.png';
+        if (pointerHolder1) pointerHolder1.style.display = (p1.visible !== false) ? 'block' : 'none';
+
+        // Kim 2 (Vàng - Giữa): Bật -> pointer2.png, Tắt -> pointer4.png
+        if (pointerImg2) pointerImg2.src = (p2.light !== false) ? '/pointer2.png' : '/pointer4.png';
+        if (pointerHolder2) pointerHolder2.style.display = (p2.visible !== false) ? 'block' : 'none';
+
+        // Kim 3 (Xanh - Phải): Bật -> pointer3.png, Tắt -> pointer4.png
+        if (pointerImg3) pointerImg3.src = (p3.light !== false) ? '/pointer3.png' : '/pointer4.png';
+        if (pointerHolder3) pointerHolder3.style.display = (p3.visible !== false) ? 'block' : 'none';
+      }
+    }
+
+    socket.on('connect', () => {
+      socket.emit('state:request');
+    });
+
+    socket.on('game:state', (state) => {
+      syncWheelState(state);
+    });
+
+    // Tự động đồng bộ ngay lập tức khi F5 / Reload / Vào muộn
+    fetch('/api/state')
+      .then(res => res.json())
+      .then(syncWheelState)
+      .catch(() => {});
+
+    // Initial draw
+    drawWheel();
+  </script>
+</body>
+</html>
