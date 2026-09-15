@@ -347,8 +347,6 @@ window.attachSoundListeners = function(socketInstance) {
       }
     } else if (data.type === 'buzzer_hit') {
       window.soundEngine.playBuzzer(timing);
-    } else if (data.type === 'turn_granted') {
-      window.soundEngine.playTurnGranted(timing);
     }
   });
 };
