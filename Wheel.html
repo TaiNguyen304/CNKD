@@ -66,39 +66,34 @@
 <body style="margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden !important; background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%); user-select: none;" class="text-slate-100">
 
   <!-- AUTO-SCALING VIEWPORT CONTAINER: ENSURES 100% VISIBILITY WITH ZERO SCROLLING ON HOST, PLAYER & PROJECTOR -->
-  <div id="wheelStageViewport" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-    <div id="wheelStageContent" style="width: 780px; height: 850px; flex-shrink: 0; transform-origin: center center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+  <div id="wheelStageViewport" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden;">
+    <div id="wheelStageContent" style="width: 760px; height: 840px; position: absolute; left: 0px; top: 0px; transform-origin: 0 0;">
 
-      <!-- WHEEL & 3 POINTERS CONTAINER -->
-      <div style="position: relative; width: 760px; height: 760px; display: flex; align-items: center; justify-content: center;">
+      <!-- WHEEL CANVAS (760x760, CENTER AT 380, 430) -->
+      <canvas id="wheelCanvas" width="760" height="760" style="position: absolute; left: 0px; top: 50px; width: 760px; height: 760px; border-radius: 9999px; display: block;"></canvas>
+
+      <!-- 3 POINTERS CỦA CHIẾC NÓN KỲ DIỆU (CHĨA THẲNG VÀO TÂM NÓN TẠI 380, 430, ĐẦU NHỌN NẰM TRÊN VIỀN NÓN) -->
+      <div style="position: absolute; left: 0px; top: 0px; width: 760px; height: 840px; pointer-events: none; z-index: 30;">
         
-        <!-- WHEEL CANVAS (HOÀN TOÀN KHÔNG CÓ BẤT KỲ TEXT HAY SHAPE NÀO) -->
-        <canvas id="wheelCanvas" width="760" height="760" style="width: 760px; height: 760px; border-radius: 9999px; display: block;"></canvas>
-
-        <!-- 3 POINTERS CỦA CHIẾC NÓN KỲ DIỆU (CHĨA THẲNG VÀO TÂM NÓN) -->
-        <div style="position: absolute; inset: 0; width: 760px; height: 760px; pointer-events: none; z-index: 30;">
-          
-          <!-- Kim 1: Bên trái Kim 2 (-30 độ), chĩa thẳng vào tâm nón -->
-          <div id="pointerHolder1" style="position: absolute; left: 380px; top: 380px; width: 0; height: 0; transform: rotate(-30deg);">
-            <div id="pointerWrapper1" class="clacker-anim" style="position: absolute; top: -410px; left: -50px; width: 100px; transform-origin: top center;">
-              <img id="pointerImg1" src="/pointer1.png" alt="Kim 1 (Đỏ)" style="width: 100%; height: auto;" class="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]">
-            </div>
+        <!-- Kim 1: Bên trái Kim 2 (-30 độ), chĩa thẳng vào tâm nón (380, 430) -->
+        <div id="pointerHolder1" style="position: absolute; left: 380px; top: 430px; width: 0; height: 0; transform: rotate(-30deg);">
+          <div id="pointerWrapper1" class="clacker-anim" style="position: absolute; top: -402px; left: -43px; width: 86px; height: 86px; transform-origin: top center;">
+            <img id="pointerImg1" src="/pointer1.png" alt="Kim 1 (Đỏ)" style="width: 100%; height: auto; display: block;" class="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]">
           </div>
+        </div>
 
-          <!-- Kim 2: Ở giữa (0 độ), chĩa thẳng vào tâm nón -->
-          <div id="pointerHolder2" style="position: absolute; left: 380px; top: 380px; width: 0; height: 0; transform: rotate(0deg);">
-            <div id="pointerWrapper2" class="clacker-anim" style="position: absolute; top: -410px; left: -50px; width: 100px; transform-origin: top center;">
-              <img id="pointerImg2" src="/pointer2.png" alt="Kim 2 (Vàng)" style="width: 100%; height: auto;" class="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]">
-            </div>
+        <!-- Kim 2: Ở giữa (0 độ), chĩa thẳng vào tâm nón (380, 430) -->
+        <div id="pointerHolder2" style="position: absolute; left: 380px; top: 430px; width: 0; height: 0; transform: rotate(0deg);">
+          <div id="pointerWrapper2" class="clacker-anim" style="position: absolute; top: -402px; left: -43px; width: 86px; height: 86px; transform-origin: top center;">
+            <img id="pointerImg2" src="/pointer2.png" alt="Kim 2 (Vàng)" style="width: 100%; height: auto; display: block;" class="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]">
           </div>
+        </div>
 
-          <!-- Kim 3: Bên phải Kim 2 (+30 độ), chĩa thẳng vào tâm nón -->
-          <div id="pointerHolder3" style="position: absolute; left: 380px; top: 380px; width: 0; height: 0; transform: rotate(30deg);">
-            <div id="pointerWrapper3" class="clacker-anim" style="position: absolute; top: -410px; left: -50px; width: 100px; transform-origin: top center;">
-              <img id="pointerImg3" src="/pointer3.png" alt="Kim 3 (Xanh)" style="width: 100%; height: auto;" class="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]">
-            </div>
+        <!-- Kim 3: Bên phải Kim 2 (+30 độ), chĩa thẳng vào tâm nón (380, 430) -->
+        <div id="pointerHolder3" style="position: absolute; left: 380px; top: 430px; width: 0; height: 0; transform: rotate(30deg);">
+          <div id="pointerWrapper3" class="clacker-anim" style="position: absolute; top: -402px; left: -43px; width: 86px; height: 86px; transform-origin: top center;">
+            <img id="pointerImg3" src="/pointer3.png" alt="Kim 3 (Xanh)" style="width: 100%; height: auto; display: block;" class="filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.85)]">
           </div>
-
         </div>
 
       </div>
@@ -172,34 +167,48 @@
     const pointerImg3 = document.getElementById('pointerImg3');
 
     // Check if player view, host view, or zoom query param requested
-    const urlParams = new URLSearchParams(window.location.search);
     const isZoomPointer = urlParams.get('zoom') === 'pointer' || urlParams.get('zoom') === 'pointers' || urlParams.get('zoom') === 'top' || urlParams.get('zoom') === 'yellow' || urlParams.get('view') === 'player' || urlParams.get('view') === 'host';
 
-    // Dynamic auto-scale wheel function: guarantees NO SCROLLING vertically or horizontally
+    // Dynamic auto-scale wheel function: guarantees NO SCROLLING and ZERO CLIPPING
     function autoScaleWheel() {
       const content = document.getElementById('wheelStageContent');
       if (!content) return;
-      const baseW = 780;
-      const baseH = 850;
       const availW = window.innerWidth || document.documentElement.clientWidth;
       const availH = window.innerHeight || document.documentElement.clientHeight;
       if (!availW || !availH) return;
 
       if (isZoomPointer) {
-        // Zoom chuẩn thấy được toàn bộ nửa trên của cái Nón và 3 kim (Kim 1 đỏ, Kim 2 vàng, Kim 3 xanh)
-        const zoomScale = Math.min((availW * 0.98) / 780, (availH * 0.98) / 440);
+        // Zoom view: Focus on upper half of wheel and 3 needles (viewW = 760, viewH = 480, target center = 380, 240)
+        const viewW = 760;
+        const viewH = 480;
+        const targetCenterX = 380;
+        const targetCenterY = 240;
+
+        const scale = Math.min((availW * 0.94) / viewW, (availH * 0.94) / viewH);
+        const posX = (availW / 2) - (targetCenterX * scale);
+        const posY = (availH / 2) - (targetCenterY * scale);
+
         content.style.position = 'absolute';
-        content.style.left = '50%';
-        content.style.top = '50%';
-        content.style.transformOrigin = '390px 230px';
-        content.style.transform = `translate(-390px, -230px) scale(${zoomScale})`;
+        content.style.left = '0px';
+        content.style.top = '0px';
+        content.style.transformOrigin = '0 0';
+        content.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
       } else {
-        content.style.position = 'relative';
-        content.style.left = 'auto';
-        content.style.top = 'auto';
-        const scale = Math.min((availW * 0.98) / baseW, (availH * 0.98) / baseH);
-        content.style.transformOrigin = 'center center';
-        content.style.transform = `scale(${scale})`;
+        // Full wheel view: (viewW = 760, viewH = 860, target center = 380, 430)
+        const viewW = 760;
+        const viewH = 860;
+        const targetCenterX = 380;
+        const targetCenterY = 430;
+
+        const scale = Math.min((availW * 0.94) / viewW, (availH * 0.94) / viewH);
+        const posX = (availW / 2) - (targetCenterX * scale);
+        const posY = (availH / 2) - (targetCenterY * scale);
+
+        content.style.position = 'absolute';
+        content.style.left = '0px';
+        content.style.top = '0px';
+        content.style.transformOrigin = '0 0';
+        content.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
       }
     }
 
@@ -271,24 +280,32 @@
           drawWheel();
         }
       };
+      wheelImages[file] = img;
     });
 
     function loadWheelImage(wheelId) {
-      currentWheelId = wheelId;
-      if (wheelImages[wheelId] && wheelImages[wheelId].complete) {
-        activeWheelImage = wheelImages[wheelId];
+      if (!wheelId) wheelId = 'vong7.png';
+      currentWheelId = String(wheelId).replace(/^\/+/, '').replace(/^\.\//, '');
+
+      if (wheelImages[currentWheelId] && wheelImages[currentWheelId].complete && wheelImages[currentWheelId].naturalWidth > 0) {
+        activeWheelImage = wheelImages[currentWheelId];
         drawWheel();
-      } else {
-        const img = new Image();
-        img.src = `/${wheelId}`;
-        img.onload = () => {
-          wheelImages[wheelId] = img;
-          if (currentWheelId === wheelId) {
-            activeWheelImage = img;
-            drawWheel();
-          }
-        };
+        return;
       }
+
+      const img = new Image();
+      img.src = `/${currentWheelId}`;
+      img.onload = () => {
+        wheelImages[currentWheelId] = img;
+        if (currentWheelId === String(wheelId).replace(/^\/+/, '').replace(/^\.\//, '')) {
+          activeWheelImage = img;
+          drawWheel();
+        }
+      };
+      img.onerror = () => {
+        drawWheel();
+      };
+      wheelImages[currentWheelId] = img;
     }
 
     // Set default wheel
@@ -397,13 +414,27 @@
           });
         }
       } else {
-        // Fallback clean neutral disk while texture loads (BỎ HOÀN TOÀN CÁC Ô CHỨA TEXT)
+        // Fallback vibrant colored 24-sector wheel while graphic texture loads
+        const colors = ['#dc2626', '#2563eb', '#16a34a', '#d97706', '#9333ea', '#ea580c', '#0891b2', '#4f46e5'];
+        for (let i = 0; i < 24; i++) {
+          const startA = (i * 2 * Math.PI) / 24;
+          const endA = ((i + 1) * 2 * Math.PI) / 24;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.arc(0, 0, radius, startA, endA);
+          ctx.closePath();
+          ctx.fillStyle = colors[i % colors.length];
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
         ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = '#0f172a';
+        ctx.arc(0, 0, radius * 0.18, 0, 2 * Math.PI);
+        ctx.fillStyle = '#f59e0b';
         ctx.fill();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#334155';
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 3;
         ctx.stroke();
       }
 
