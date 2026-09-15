@@ -1,10 +1,15 @@
-// Enhanced Sound Synthesizer & Audio Asset Player
+// Sound Asset Player
 class SoundEngine {
   constructor() {
     this.ctx = null;
-    this.muted = false;
+    const isController = typeof window !== 'undefined' && (
+      window.location.pathname.toLowerCase().includes('controller') ||
+      window.location.href.toLowerCase().includes('controller')
+    );
+    this.muted = isController;
     this.audioElements = {};
     this.activeSpinAudio = null;
+    this.activeSoundboardAudio = null;
   }
 
   init() {
@@ -15,28 +20,39 @@ class SoundEngine {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
     }
   }
 
   playAudioFile(filename, loop = false, volume = 0.8) {
-    if (this.muted) return null;
-    try {
-      const audio = new Audio(`/${encodeURIComponent(filename)}`);
-      audio.volume = volume;
-      audio.loop = loop;
-      audio.play().catch(() => {});
-      return audio;
-    } catch (e) {
-      return null;
+    if (this.muted || !filename) return null;
+    this.init();
+
+    // Clean filename
+    const cleanName = filename.replace(/^\/+/, '');
+    
+    // Construct standard URL to file in root / public directory
+    const audioUrl = '/' + encodeURI(cleanName);
+
+    const audio = new Audio(audioUrl);
+    audio.volume = volume;
+    audio.loop = loop;
+
+    const promise = audio.play();
+    if (promise !== undefined) {
+      promise.catch(err => {
+        console.warn('[SoundEngine] Playback issue for:', audioUrl, err);
+      });
     }
+
+    return audio;
   }
 
-  playSpin() {
+  playSpin(musicFile) {
     if (this.muted) return;
     this.stopSpin();
-    // spin.mp3 plays for the duration of the wheel spin
-    this.activeSpinAudio = this.playAudioFile('spin.mp3', false, 0.9);
+    const fileToPlay = musicFile || 'Nhạc quay Nón 1.mp3';
+    this.activeSpinAudio = this.playAudioFile(fileToPlay, false, 0.9);
   }
 
   stopSpin() {
@@ -49,119 +65,174 @@ class SoundEngine {
     }
   }
 
-  playClick() {
-    if (this.muted) return;
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.04);
-    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.04);
+  playSoundboard(filename) {
+    if (this.muted || !filename) return;
+    if (this.lastPlayedFile === filename && (Date.now() - (this.lastPlayedTime || 0) < 300)) {
+      return;
+    }
+    this.lastPlayedFile = filename;
+    this.lastPlayedTime = Date.now();
+    this.stopSoundboard();
+    this.activeSoundboardAudio = this.playAudioFile(filename, false, 0.9);
   }
 
-  playWheelTick(pitch = 900) {
-    if (this.muted) return;
-    this.init();
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(pitch, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.035);
-    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.035);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.035);
+  stopSoundboard() {
+    if (this.activeSoundboardAudio) {
+      try {
+        this.activeSoundboardAudio.pause();
+        this.activeSoundboardAudio.currentTime = 0;
+      } catch (e) {}
+      this.activeSoundboardAudio = null;
+    }
+  }
+
+  playClick() {
+    // Silent
+  }
+
+  playWheelTick() {
+    // Silent
   }
 
   playBuzzer() {
     if (this.muted) return;
-    this.init();
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    [260, 310].forEach(freq => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, now);
-      gain.gain.setValueAtTime(0.35, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.7);
-    });
+    return this.playAudioFile('buzzer.mp3', false, 0.9);
   }
 
   playLetterCorrect() {
     if (this.muted) return;
-    this.init();
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    const notes = [1046.50, 1567.98];
-    notes.forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
-      gain.gain.setValueAtTime(0.28, now + idx * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.6);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now + idx * 0.12);
-      osc.stop(now + idx * 0.12 + 0.6);
-    });
+    return this.playAudioFile('ding.wav', false, 0.9) || this.playAudioFile('Open_2.mp3', false, 0.9);
   }
 
   playLetterWrong() {
     if (this.muted) return;
-    this.init();
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(140, now);
-    osc.frequency.linearRampToValueAtTime(90, now + 0.4);
-    gain.gain.setValueAtTime(0.25, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.4);
+    return this.playAudioFile('wrong.mp3', false, 0.9);
   }
 
   playSolvePuzzle() {
     if (this.muted) return;
-    this.playAudioFile('Intro.mp3', false, 0.7);
+    return this.playAudioFile('solved.mp3', false, 0.9) || this.playAudioFile('solved 2001.mp3', false, 0.9);
   }
 
   playRoundChange() {
-    if (this.muted) return;
-    this.playAudioFile('Người chơi.mp3', false, 0.7);
+    // Disabled automatic player music on round switch
+    return;
   }
 
   playTurnGranted() {
     if (this.muted) return;
-    this.playAudioFile('HostEntrance.mp3', false, 0.6);
+    return this.playAudioFile('nhac_host_entrance.mp3', false, 0.8) ||
+           this.playAudioFile('HostEntrance.mp3', false, 0.8);
   }
 
   playResultEffect(result) {
-    // Bỏ luôn các âm thanh tự sinh dựa trên cái Nón chứa text cũ (Coi như nón text cũ không tồn tại)
     return;
   }
 }
 
 window.soundEngine = new SoundEngine();
-document.addEventListener('click', () => {
-  if (window.soundEngine) window.soundEngine.init();
-}, { once: true });
+
+window.attachSoundListeners = function(socketInstance) {
+  if (!socketInstance || socketInstance._soundListenersAttached) return;
+  socketInstance._soundListenersAttached = true;
+
+  const isController = typeof window !== 'undefined' && (
+    window.location.pathname.toLowerCase().includes('controller') ||
+    window.location.href.toLowerCase().includes('controller')
+  );
+  if (isController) {
+    if (window.soundEngine) {
+      window.soundEngine.muted = true;
+    }
+    return;
+  }
+
+  socketInstance.on('soundboard:play_file', (filename) => {
+    if (window.soundEngine && filename) {
+      window.soundEngine.playSoundboard(filename);
+    }
+  });
+
+  socketInstance.on('soundboard:stop_all', () => {
+    if (window.soundEngine) {
+      window.soundEngine.stopSoundboard();
+      window.soundEngine.stopSpin();
+    }
+  });
+
+  socketInstance.on('wheel:start_spin', (data) => {
+    if (window.soundEngine) {
+      const music = (data && data.music) ? data.music : 'Nhạc quay Nón 1.mp3';
+      window.soundEngine.playSpin(music);
+    }
+  });
+
+  socketInstance.on('wheel:landed', () => {
+    if (window.soundEngine) {
+      window.soundEngine.stopSpin();
+    }
+  });
+
+  socketInstance.on('sound:play', (data) => {
+    if (!data || !window.soundEngine) return;
+    if (data.type === 'spin_start') {
+      window.soundEngine.playSpin(data.music || 'Nhạc quay Nón 1.mp3');
+    } else if (data.type === 'round_change') {
+      window.soundEngine.playRoundChange();
+    } else if (data.type === 'puzzle_show') {
+      const snd = data.sound || 'reveal.mp3';
+      if (snd && snd !== 'None') {
+        window.soundEngine.stopSoundboard();
+        window.soundEngine.playAudioFile(snd);
+      }
+    } else if (data.type === 'letter_mark') {
+      const snd = data.sound || 'ding.wav';
+      if (snd && snd !== 'None') window.soundEngine.playAudioFile(snd);
+    } else if (data.type === 'letter_open') {
+      const snd = data.sound || '2nd_ding.wav';
+      if (snd && snd !== 'None') window.soundEngine.playAudioFile(snd);
+    } else if (data.type === 'puzzle_solve') {
+      const snd = data.sound || 'ClearPuzzle.mp3';
+      if (snd && snd !== 'None') {
+        window.soundEngine.stopSoundboard();
+        window.soundEngine.stopSpin();
+        window.soundEngine.playAudioFile(snd);
+      }
+    } else if (data.type === 'buzzer_hit') {
+      window.soundEngine.playBuzzer();
+    } else if (data.type === 'letter_correct') {
+      window.soundEngine.playLetterCorrect();
+    } else if (data.type === 'letter_wrong') {
+      window.soundEngine.playLetterWrong();
+    }
+  });
+};
+
+// Automatic hook into io() socket initialization
+if (typeof window !== 'undefined') {
+  const hookSocket = () => {
+    if (window.io && !window._soundIoHooked) {
+      const originalIo = window.io;
+      window.io = function(...args) {
+        const s = originalIo(...args);
+        window.attachSoundListeners(s);
+        return s;
+      };
+      Object.assign(window.io, originalIo);
+      window._soundIoHooked = true;
+    }
+  };
+  hookSocket();
+  document.addEventListener('DOMContentLoaded', hookSocket);
+}
+
+// Invisible User Interaction Listener to Unlock Audio Context
+const unlockAudio = () => {
+  if (window.soundEngine) {
+    window.soundEngine.init();
+  }
+};
+
+document.addEventListener('click', unlockAudio, { capture: true });
+document.addEventListener('touchstart', unlockAudio, { capture: true });
+document.addEventListener('keydown', unlockAudio, { capture: true });
