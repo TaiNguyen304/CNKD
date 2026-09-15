@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Initial default round questions & multi-topic data (Hoàn toàn không có câu hỏi ô chữ cứng trong code)
+// Initial default round questions template
 const initialRoundsData = {
   'Đoán nhanh 1': [],
   'Đoán nhanh 2': [],
@@ -49,83 +49,9 @@ const AVAILABLE_WHEELS = [
   { id: 'vong23.png', label: 'Nón 6 (vong23.png)' }
 ];
 
-// Centralized Game State
-const gameState = {
-  players: [
-    { id: 1, name: 'Người chơi 1', roundScore: 0, totalScore: 0, canSpin: false, buzzed: false, buzzTime: null },
-    { id: 2, name: 'Người chơi 2', roundScore: 0, totalScore: 0, canSpin: false, buzzed: false, buzzTime: null },
-    { id: 3, name: 'Người chơi 3', roundScore: 0, totalScore: 0, canSpin: false, buzzed: false, buzzTime: null }
-  ],
-  currentRound: 'Vòng 1',
-  puzzle: {
-    category: '',
-    clue: '',
-    answer: '',
-    gridMatrix: null, // 4x16 array from Excel coordinates
-    revealedIndices: [], // array of cell indices 0..63 (r*16 + c)
-    markedIndices: [],
-    boardState: 'hidden', // 'hidden', 'visible', 'revealed', 'cleared'
-    revealedLetters: [],
-    showCategory: true,
-    showClue: true,
-    borderColor: '#800080'
-  },
-  // Selection mode for Vòng 1-4 and Vòng đặc biệt
-  topicSelection: {
-    active: false,
-    round: null,
-    mode: null, // 'choose_topic' or 'fixed'
-    topics: []
-  },
-  revealProgress: {
-    active: false,
-    intervalMs: 1500
-  },
-  wheel: {
-    selectedWheel: 'vong7.png', // Default wheel as requested
-    spinning: false,
-    currentAngle: 0,
-    startAngle: 0,
-    finalAngle: 0,
-    startTime: 0,
-    duration: 22000, // Exactly 22 seconds as requested
-    result: null,
-    activeSpinner: null,
-    lockedAll: true,
-    pointers: {
-      p1: { light: true, visible: true }, // Kim 1 (Đỏ - Trái, -30 deg)
-      p2: { light: true, visible: true }, // Kim 2 (Vàng - Giữa, 0 deg)
-      p3: { light: true, visible: true }  // Kim 3 (Xanh - Phải, +30 deg)
-    }
-  },
-  buzzer: {
-    active: false,
-    enabled: false,
-    winner: null,
-    timestamp: null
-  },
-  roundsData: JSON.parse(JSON.stringify(initialRoundsData))
-};
+let globalLoadedRoundsData = JSON.parse(JSON.stringify(initialRoundsData));
 
-// Try loading Puzzle.xlsx if present to initialize roundsData
-function loadPuzzlesFromExcelFile(filePath) {
-  try {
-    if (!fs.existsSync(filePath)) return false;
-    const wb = xlsx.readFile(filePath);
-    const parsed = parseWorkbookData(wb);
-    if (Object.keys(parsed).length > 0) {
-      gameState.roundsData = { ...gameState.roundsData, ...parsed };
-      console.log('Successfully pre-loaded questions from', filePath);
-      return true;
-    }
-  } catch (err) {
-    console.error('Error reading Puzzle.xlsx:', err.message);
-  }
-  return false;
-}
-
-loadPuzzlesFromExcelFile(path.join(__dirname, 'Puzzle.xlsx'));
-
+// Parser for Puzzle.xlsx
 function parseWorkbookData(workbook) {
   const result = {};
   if (!workbook || !workbook.SheetNames) return result;
@@ -136,7 +62,7 @@ function parseWorkbookData(workbook) {
 
     const range = xlsx.utils.decode_range(ws['!ref']);
     
-    // Tìm tất cả các dòng header có chữ 'Chủ đề' ở Cột A (hoặc bất kỳ cột nào)
+    // Tìm các dòng header có chữ 'Chủ đề' ở Cột A
     const headerRows = [];
     for (let r = range.s.r; r <= range.e.r; r++) {
       const cellA = ws[xlsx.utils.encode_cell({ r, c: 0 })];
@@ -155,21 +81,12 @@ function parseWorkbookData(workbook) {
     const blocks = [];
 
     headerRows.forEach((headerR, bIdx) => {
-      // Dòng headerR: Cột A = "Chủ đề", Cột B = "Ô chữ" (chỉ là tên cột)
-      
-      // Dòng headerR + 1: Cột A = Tên chủ đề
       const catCell = ws[xlsx.utils.encode_cell({ r: headerR + 1, c: 0 })];
       let category = catCell && catCell.v !== undefined ? String(catCell.v).trim() : '';
       
-      // Dòng headerR + 2: Cột A = Gợi ý / Câu hỏi
       const clueCell = ws[xlsx.utils.encode_cell({ r: headerR + 2, c: 0 })];
       let clue = clueCell && clueCell.v !== undefined ? String(clueCell.v).trim() : '';
 
-      // Trích xuất chính xác ma trận 4 hàng x 16 cột (B..Q tương ứng c = 1..16)
-      // Dòng 1 trên sân khấu = headerR + 1 trong Excel (ngang hàng với tên Chủ đề)
-      // Dòng 2 trên sân khấu = headerR + 2 trong Excel (ngang hàng với Gợi ý/Câu hỏi)
-      // Dòng 3 trên sân khấu = headerR + 3 trong Excel
-      // Dòng 4 trên sân khấu = headerR + 4 trong Excel
       let gridMatrix = Array.from({ length: 4 }, () => Array(16).fill(''));
       let fullWords = [];
       let cellFoundCount = 0;
@@ -178,7 +95,7 @@ function parseWorkbookData(workbook) {
         const r = headerR + 1 + rowIdx;
         let curWord = '';
         for (let colIdx = 0; colIdx < 16; colIdx++) {
-          const c = colIdx + 1; // Col B (1) -> Col Q (16)
+          const c = colIdx + 1;
           const cell = ws[xlsx.utils.encode_cell({ r, c })];
           const val = cell && cell.v !== undefined ? String(cell.v).trim().toUpperCase() : '';
           gridMatrix[rowIdx][colIdx] = val;
@@ -218,7 +135,6 @@ function parseWorkbookData(workbook) {
 
     if (blocks.length > 0) {
       result[sheetName] = blocks;
-      // Tự động alias các tên vòng chơi
       if (sheetName === 'Khán giả') result['Vòng khán giả'] = blocks;
       if (sheetName === 'Vòng khán giả') result['Khán giả'] = blocks;
       if (sheetName === 'Đặc biệt') result['Vòng đặc biệt'] = blocks;
@@ -235,17 +151,236 @@ function parseWorkbookData(workbook) {
   return result;
 }
 
-// Timer for automatic letter revealing
-let revealIntervalTimer = null;
-
-function stopAutoReveal() {
-  if (revealIntervalTimer) {
-    clearInterval(revealIntervalTimer);
-    revealIntervalTimer = null;
+function loadInitialPuzzles() {
+  try {
+    const filePath = path.join(__dirname, 'Puzzle.xlsx');
+    if (fs.existsSync(filePath)) {
+      const wb = xlsx.readFile(filePath);
+      const parsed = parseWorkbookData(wb);
+      if (Object.keys(parsed).length > 0) {
+        globalLoadedRoundsData = { ...globalLoadedRoundsData, ...parsed };
+        console.log('Successfully pre-loaded questions from Puzzle.xlsx');
+      }
+    }
+  } catch (err) {
+    console.error('Error pre-loading Puzzle.xlsx:', err.message);
   }
-  gameState.revealProgress.active = false;
+}
+loadInitialPuzzles();
+
+// Factory for a fresh Game State
+function createNewGameState() {
+  return {
+    players: [
+      { id: 1, name: 'Người chơi 1', roundScore: 0, totalScore: 0, canSpin: false, buzzed: false, buzzTime: null },
+      { id: 2, name: 'Người chơi 2', roundScore: 0, totalScore: 0, canSpin: false, buzzed: false, buzzTime: null },
+      { id: 3, name: 'Người chơi 3', roundScore: 0, totalScore: 0, canSpin: false, buzzed: false, buzzTime: null }
+    ],
+    currentRound: 'Vòng 1',
+    puzzle: {
+      category: '',
+      clue: '',
+      answer: '',
+      gridMatrix: null,
+      revealedIndices: [],
+      markedIndices: [],
+      boardState: 'hidden',
+      revealedLetters: [],
+      showCategory: true,
+      showClue: true,
+      borderColor: '#800080'
+    },
+    topicSelection: {
+      active: false,
+      round: null,
+      mode: null,
+      topics: []
+    },
+    revealProgress: {
+      active: false,
+      intervalMs: 800
+    },
+    wheel: {
+      selectedWheel: 'vong7.png',
+      spinning: false,
+      currentAngle: 0,
+      startAngle: 0,
+      finalAngle: 0,
+      startTime: 0,
+      duration: 22000,
+      result: null,
+      activeSpinner: null,
+      lockedAll: true,
+      pointers: {
+        p1: { light: true, visible: true },
+        p2: { light: true, visible: true },
+        p3: { light: true, visible: true }
+      }
+    },
+    wheelOverlays: {},
+    overlayAngles: {},
+    spinMusic: 'Nhạc quay Nón 1.mp3',
+    puzzleSounds: {
+      showBlank: 'reveal.mp3',
+      markLetter: 'ding.wav',
+      openLetter: '2nd_ding.wav',
+      solvePuzzle: 'ClearPuzzle.mp3'
+    },
+    buzzer: {
+      active: false,
+      enabled: false,
+      winner: null,
+      timestamp: null
+    },
+    roundsData: JSON.parse(JSON.stringify(globalLoadedRoundsData))
+  };
 }
 
+// Room Management (Multi-room architecture)
+const rooms = new Map();
+
+function generateRandomRoomId() {
+  let id = '';
+  do {
+    id = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+  } while (rooms.has(id));
+  return id;
+}
+
+function generateRandomPass() {
+  return Math.floor(1000 + Math.random() * 9000).toString(); // 4 digits
+}
+
+function createRoom(customRoomId = null, customPasses = null) {
+  const roomId = (customRoomId && String(customRoomId).trim()) || generateRandomRoomId();
+  const p1 = (customPasses && (customPasses[1] || customPasses['1'] || customPasses.p1)) || generateRandomPass();
+  const p2 = (customPasses && (customPasses[2] || customPasses['2'] || customPasses.p2)) || generateRandomPass();
+  const p3 = (customPasses && (customPasses[3] || customPasses['3'] || customPasses.p3)) || generateRandomPass();
+  const passwords = {
+    1: p1,
+    2: p2,
+    3: p3,
+    '1': p1,
+    '2': p2,
+    '3': p3,
+    p1: p1,
+    p2: p2,
+    p3: p3
+  };
+
+  const room = {
+    id: roomId,
+    passwords,
+    createdAt: Date.now(),
+    gameState: createNewGameState(),
+    wheelSpinTimeout: null,
+    revealIntervalTimer: null
+  };
+
+  rooms.set(roomId, room);
+  return room;
+}
+
+// Ensure default room 100000 exists
+createRoom('100000', { 1: '1111', 2: '2222', 3: '3333', p1: '1111', p2: '2222', p3: '3333' });
+
+function getRoom(roomId) {
+  if (!roomId) return null;
+  const cleanId = String(roomId).trim();
+  return rooms.get(cleanId) || null;
+}
+
+function getOrCreateRoom(roomId) {
+  if (!roomId) return createRoom();
+  const cleanId = String(roomId).trim();
+  let r = rooms.get(cleanId);
+  if (!r) {
+    r = createRoom(cleanId);
+  }
+  return r;
+}
+
+// SANITIZE GAME STATE FOR PUBLIC CLIENTS (PLAYER, PUZZLEBOARD, WHEEL)
+// Strict answer protection: Never expose secret letters before reveal
+function sanitizeGameStateForPublic(state) {
+  if (!state) return null;
+  const clone = JSON.parse(JSON.stringify(state));
+
+  if (clone.puzzle) {
+    const isRevealed = clone.puzzle.boardState === 'revealed';
+    if (!isRevealed) {
+      clone.puzzle.answer = ''; // Mask the raw answer text
+
+      if (clone.puzzle.gridMatrix && Array.isArray(clone.puzzle.gridMatrix)) {
+        const revealedSet = new Set(clone.puzzle.revealedIndices || []);
+        clone.puzzle.gridMatrix = clone.puzzle.gridMatrix.map((row, r) => {
+          return row.map((char, c) => {
+            const cellIdx = r * 16 + c;
+            if (!char || !char.trim()) return '';
+            // If already revealed, send actual letter. Otherwise send mask indicator
+            if (revealedSet.has(cellIdx)) {
+              return char;
+            } else {
+              return '#'; // Masked character indicating box contains a letter
+            }
+          });
+        });
+      }
+    }
+  }
+
+  // Sanitize topic options to prevent reading future answers
+  if (clone.topicSelection && Array.isArray(clone.topicSelection.topics)) {
+    clone.topicSelection.topics = clone.topicSelection.topics.map(t => ({
+      category: t.category,
+      clue: t.clue
+    }));
+  }
+
+  // Remove full answer bank from public clients
+  if (clone.roundsData) {
+    clone.roundsData = {};
+  }
+
+  return clone;
+}
+
+// Broadcast room state to all connected sockets in that room
+function broadcastRoomState(roomId) {
+  const room = getRoom(roomId);
+  if (!room) return;
+
+  const socketsInRoom = io.sockets.adapter.rooms.get(roomId);
+  if (!socketsInRoom) return;
+
+  const fullState = room.gameState;
+  const publicState = sanitizeGameStateForPublic(fullState);
+
+  for (const socketId of socketsInRoom) {
+    const s = io.sockets.sockets.get(socketId);
+    if (s) {
+      const role = s.data.role;
+      if (role === 'controller' || role === 'host') {
+        s.emit('game:state', fullState);
+      } else {
+        s.emit('game:state', publicState);
+      }
+    }
+  }
+}
+
+// Stop auto letter reveal timer for a room
+function stopRoomAutoReveal(room) {
+  if (room && room.revealIntervalTimer) {
+    clearInterval(room.revealIntervalTimer);
+    room.revealIntervalTimer = null;
+  }
+  if (room && room.gameState && room.gameState.revealProgress) {
+    room.gameState.revealProgress.active = false;
+  }
+}
+
+// Vietnamese tone removal for letter comparison
 function removeToneMarks(str) {
   if (!str) return '';
   const toneMap = {
@@ -265,836 +400,883 @@ function removeToneMarks(str) {
   return str.split('').map(c => toneMap[c.toUpperCase()] || c.toUpperCase()).join('');
 }
 
-function buildGridMatrixFromAnswer(answer) {
-  const grid = Array.from({ length: 4 }, () => Array(16).fill(''));
-  if (!answer) return grid;
-
-  const words = answer.trim().toUpperCase().split(/\s+/).filter(w => w.length > 0);
-  const rows = [[], [], [], []];
-  let curRow = 0;
-  let curLen = 0;
-
-  for (let w = 0; w < words.length; w++) {
-    const word = words[w];
-    const needed = curLen === 0 ? word.length : word.length + 1;
-    if (curLen + needed <= 16) {
-      rows[curRow].push(word);
-      curLen += needed;
-    } else {
-      curRow++;
-      if (curRow >= 4) {
-        curRow = 3;
-        rows[curRow].push(word);
-      } else {
-        rows[curRow].push(word);
-        curLen = word.length;
-      }
-    }
-  }
-
-  const activeRows = rows.filter(r => r.length > 0);
-  const usedCount = activeRows.length;
-  let startRow = 0;
-  if (usedCount === 1) startRow = 1;
-  else if (usedCount === 2) startRow = 1;
-  else if (usedCount === 3) startRow = 0;
-
-  for (let r = 0; r < usedCount; r++) {
-    const targetRowIdx = startRow + r;
-    if (targetRowIdx >= 4) break;
-    const textInRow = rows[r].join(' ');
-    const leftPad = Math.max(0, Math.floor((16 - textInRow.length) / 2));
-    let charIdx = 0;
-    for (let c = 0; c < 16; c++) {
-      if (c >= leftPad && charIdx < textInRow.length) {
-        const ch = textInRow[charIdx];
-        charIdx++;
-        if (ch !== ' ') {
-          grid[targetRowIdx][c] = ch;
-        }
-      }
-    }
-  }
-  return grid;
-}
-
-function getActivePuzzleMatrix() {
-  if (gameState.puzzle.gridMatrix && Array.isArray(gameState.puzzle.gridMatrix) && gameState.puzzle.gridMatrix.length === 4) {
-    return gameState.puzzle.gridMatrix;
-  }
-  return buildGridMatrixFromAnswer(gameState.puzzle.answer);
-}
-
-function getUnrevealedCharIndices() {
-  const matrix = getActivePuzzleMatrix();
-  const unrevealed = [];
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 16; c++) {
-      const ch = (matrix[r] && matrix[r][c]) ? matrix[r][c] : '';
-      if (ch && ch.trim()) {
-        const cellIdx = r * 16 + c;
-        if (!gameState.puzzle.revealedIndices.includes(cellIdx)) {
-          unrevealed.push(cellIdx);
-        }
-      }
-    }
-  }
-  return unrevealed;
-}
-
-function ensureWheelStateCurrent() {
-  if (gameState.wheel.spinning && gameState.wheel.startTime) {
-    const elapsed = Date.now() - gameState.wheel.startTime;
-    if (elapsed >= (gameState.wheel.duration || 22000)) {
-      gameState.wheel.spinning = false;
-      gameState.wheel.lockedAll = true;
-      gameState.wheel.activeSpinner = null;
-    }
-  }
-}
-
-function broadcastState(eventName = 'game:state') {
-  ensureWheelStateCurrent();
-  io.emit(eventName, gameState);
-}
-
-// Socket.IO logic
+// SOCKET.IO EVENT HANDLING
 io.on('connection', (socket) => {
-  ensureWheelStateCurrent();
-  socket.emit('game:state', gameState);
+  // Client joins a specific room
+  socket.on('room:join', (data = {}) => {
+    const { roomId, role, auth, slot } = data;
+    if (!roomId) {
+      socket.emit('room:join_error', { message: 'Vui lòng cung cấp mã phòng (roomid)!' });
+      return;
+    }
 
+    const room = getOrCreateRoom(roomId);
+    socket.data.roomId = room.id;
+    socket.data.role = role || 'guest';
+    socket.data.slot = Number(slot) || null;
+
+    // Validate player authentication
+    if (role === 'player') {
+      const playerSlot = Number(slot);
+      const expectedPass = room.passwords[playerSlot] || room.passwords['p' + playerSlot] || room.passwords[String(playerSlot)];
+      if (!auth || String(auth).trim() !== String(expectedPass).trim()) {
+        socket.emit('room:auth_failed', { message: 'Mật khẩu người chơi không chính xác hoặc phòng không tồn tại!' });
+        return;
+      }
+      socket.data.authenticated = true;
+    }
+
+    socket.join(room.id);
+    socket.emit('room:joined', {
+      roomId: room.id,
+      role: socket.data.role,
+      passwords: (role === 'controller' || role === 'host') ? room.passwords : undefined
+    });
+
+    // Send initial state
+    if (role === 'controller' || role === 'host') {
+      socket.emit('game:state', room.gameState);
+    } else {
+      socket.emit('game:state', sanitizeGameStateForPublic(room.gameState));
+    }
+  });
+
+  // State request
   socket.on('state:request', () => {
-    ensureWheelStateCurrent();
-    socket.emit('game:state', gameState);
+    const roomId = socket.data.roomId;
+    const room = getRoom(roomId);
+    if (!room) return;
+
+    if (socket.data.role === 'controller' || socket.data.role === 'host') {
+      socket.emit('game:state', room.gameState);
+    } else {
+      socket.emit('game:state', sanitizeGameStateForPublic(room.gameState));
+    }
   });
 
-  // Player controls (3 rows)
+  // Helper to get socket's room
+  function currentRoom() {
+    const roomId = socket.data.roomId;
+    return getRoom(roomId);
+  }
+
+  // Room creation / update from Controller
+  socket.on('room:create_new', (customData = {}) => {
+    const newRoomId = customData.roomId || generateRandomRoomId();
+    const newPasses = customData.passwords || {
+      p1: generateRandomPass(),
+      p2: generateRandomPass(),
+      p3: generateRandomPass()
+    };
+    const room = createRoom(newRoomId, newPasses);
+    socket.data.roomId = room.id;
+    socket.data.role = 'controller';
+    socket.join(room.id);
+
+    socket.emit('room:created', {
+      roomId: room.id,
+      passwords: room.passwords
+    });
+    broadcastRoomState(room.id);
+  });
+
+  // Sound selection config
+  socket.on('puzzle:set_sound', ({ key, value }) => {
+    const room = currentRoom();
+    if (!room || !key || !value) return;
+    if (!room.gameState.puzzleSounds) room.gameState.puzzleSounds = {};
+    room.gameState.puzzleSounds[key] = value;
+    broadcastRoomState(room.id);
+  });
+
+  // Player details & scores
   socket.on('player:set', (data) => {
-    const { playerId, name, roundScore } = data;
-    const player = gameState.players.find(p => p.id === Number(playerId));
-    if (player) {
-      if (typeof name === 'string' && name.trim()) {
-        player.name = name.trim();
-      }
-      if (!isNaN(roundScore) && roundScore !== null && roundScore !== '') {
-        player.roundScore = Number(roundScore);
-      }
-      broadcastState();
+    const room = currentRoom();
+    if (!room) return;
+    const { playerId, name, roundScore, totalScore } = data;
+    const p = room.gameState.players.find(x => x.id === Number(playerId));
+    if (p) {
+      if (name !== undefined) p.name = name;
+      if (roundScore !== undefined) p.roundScore = Number(roundScore);
+      if (totalScore !== undefined) p.totalScore = Number(totalScore);
+      broadcastRoomState(room.id);
     }
   });
 
-  socket.on('player:add_round', (data) => {
-    const { playerId, amount } = data;
-    const player = gameState.players.find(p => p.id === Number(playerId));
-    if (player) {
-      const val = Number(amount) || 0;
-      player.roundScore += val;
-      broadcastState();
+  socket.on('player:add_round', ({ playerId, amount }) => {
+    const room = currentRoom();
+    if (!room) return;
+    const p = room.gameState.players.find(x => x.id === Number(playerId));
+    if (p) {
+      p.roundScore = (p.roundScore || 0) + Number(amount);
+      broadcastRoomState(room.id);
     }
   });
 
-  socket.on('player:subtract_round', (data) => {
-    const { playerId, amount } = data;
-    const player = gameState.players.find(p => p.id === Number(playerId));
-    if (player) {
-      const val = Number(amount) || 0;
-      player.roundScore = Math.max(0, player.roundScore - val);
-      broadcastState();
+  socket.on('player:subtract_round', ({ playerId, amount }) => {
+    const room = currentRoom();
+    if (!room) return;
+    const p = room.gameState.players.find(x => x.id === Number(playerId));
+    if (p) {
+      p.roundScore = (p.roundScore || 0) - Number(amount);
+      broadcastRoomState(room.id);
     }
   });
 
-  socket.on('player:reset_round', (data) => {
-    const { playerId } = data;
-    const player = gameState.players.find(p => p.id === Number(playerId));
-    if (player) {
-      player.roundScore = 0;
-      broadcastState();
+  socket.on('player:multiply_round', ({ playerId, factor }) => {
+    const room = currentRoom();
+    if (!room) return;
+    const p = room.gameState.players.find(x => x.id === Number(playerId));
+    if (p) {
+      p.roundScore = Math.floor((p.roundScore || 0) * Number(factor));
+      broadcastRoomState(room.id);
     }
   });
 
-  socket.on('player:multiply_round', (data) => {
-    const { playerId, factor } = data;
-    const player = gameState.players.find(p => p.id === Number(playerId));
-    if (player) {
-      if (factor === 2) {
-        player.roundScore = player.roundScore * 2;
-      } else if (factor === 0.5) {
-        player.roundScore = Math.floor(player.roundScore / 2);
-      }
-      broadcastState();
+  socket.on('player:reset_round', ({ playerId }) => {
+    const room = currentRoom();
+    if (!room) return;
+    const p = room.gameState.players.find(x => x.id === Number(playerId));
+    if (p) {
+      p.roundScore = 0;
+      broadcastRoomState(room.id);
     }
   });
 
-  socket.on('player:set_total', (data) => {
-    const { playerId, totalScore } = data;
-    const player = gameState.players.find(p => p.id === Number(playerId));
-    if (player) {
-      if (!isNaN(totalScore) && totalScore !== null && totalScore !== '') {
-        player.totalScore = Number(totalScore);
-      }
-      broadcastState();
+  socket.on('player:set_total', ({ playerId, totalScore }) => {
+    const room = currentRoom();
+    if (!room) return;
+    const p = room.gameState.players.find(x => x.id === Number(playerId));
+    if (p) {
+      p.totalScore = Number(totalScore);
+      broadcastRoomState(room.id);
     }
   });
 
-  socket.on('player:add_to_total', (data) => {
-    const { playerId, resetRound } = data;
-    const player = gameState.players.find(p => p.id === Number(playerId));
-    if (player) {
-      player.totalScore += player.roundScore;
-      if (resetRound !== false) {
-        player.roundScore = 0;
-      }
-      broadcastState();
+  socket.on('player:add_to_total', ({ playerId, resetRound }) => {
+    const room = currentRoom();
+    if (!room) return;
+    const p = room.gameState.players.find(x => x.id === Number(playerId));
+    if (p) {
+      p.totalScore = (p.totalScore || 0) + (p.roundScore || 0);
+      if (resetRound) p.roundScore = 0;
+      broadcastRoomState(room.id);
     }
   });
 
-  // Direct Round selection (for quick guess and non-modal rounds)
+  // Round Change
   socket.on('round:set', (roundName) => {
-    if (typeof roundName === 'string') {
-      gameState.currentRound = roundName;
-      gameState.buzzer.active = true;
-      gameState.buzzer.winner = null;
-      gameState.players.forEach(p => {
-        p.buzzed = false;
-        p.buzzTime = null;
-      });
+    const room = currentRoom();
+    if (!room || !roundName) return;
 
-      // Load matching round default puzzle if exists
-      const roundTopics = gameState.roundsData[roundName];
-      if (roundTopics && roundTopics.length > 0) {
-        const first = roundTopics[0];
-        gameState.puzzle.category = first.category;
-        gameState.puzzle.clue = first.clue || '';
-        gameState.puzzle.answer = first.answer;
-        gameState.puzzle.gridMatrix = first.gridMatrix || buildGridMatrixFromAnswer(first.answer);
-        gameState.puzzle.revealedIndices = [];
-        gameState.puzzle.markedIndices = [];
-        gameState.puzzle.revealedLetters = [];
-        gameState.puzzle.boardState = 'visible';
+    room.gameState.currentRound = roundName;
+    room.gameState.players.forEach(p => p.roundScore = 0);
+    room.gameState.topicSelection.active = false;
+    room.gameState.buzzer.winner = null;
+    room.gameState.buzzer.timestamp = null;
+    room.gameState.puzzle.borderColor = '#800080';
+
+    stopRoomAutoReveal(room);
+
+    // Auto-load question from roundsData
+    const questions = room.gameState.roundsData[roundName];
+    if (questions && questions.length > 0) {
+      const q = questions[0];
+      room.gameState.puzzle.category = q.category || roundName.toUpperCase();
+      room.gameState.puzzle.clue = q.clue || '';
+      room.gameState.puzzle.answer = q.answer || '';
+      room.gameState.puzzle.gridMatrix = q.gridMatrix || null;
+      room.gameState.puzzle.revealedIndices = [];
+      room.gameState.puzzle.markedIndices = [];
+      room.gameState.puzzle.revealedLetters = [];
+      room.gameState.puzzle.boardState = 'visible';
+
+      const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.showBlank) || 'reveal.mp3';
+      if (soundFile && soundFile !== 'None') {
+        io.to(room.id).emit('sound:play', { type: 'puzzle_show', sound: soundFile });
       }
+    }
 
-      broadcastState();
-      io.emit('sound:play', { type: 'round_change', round: roundName });
+    broadcastRoomState(room.id);
+    io.to(room.id).emit('sound:play', { type: 'round_change', round: roundName });
+  });
+
+  // Choice 1: "Ô chữ cố định"
+  socket.on('round:choose_fixed', (roundName) => {
+    const room = currentRoom();
+    if (!room || !roundName) return;
+
+    room.gameState.currentRound = roundName;
+    room.gameState.players.forEach(p => p.roundScore = 0);
+    room.gameState.buzzer.winner = null;
+    room.gameState.puzzle.borderColor = '#800080';
+
+    room.gameState.topicSelection = {
+      active: false,
+      round: roundName,
+      mode: 'fixed',
+      topics: []
+    };
+
+    const questions = room.gameState.roundsData[roundName] || [];
+    if (questions.length > 0) {
+      const q = questions[0];
+      room.gameState.puzzle.category = q.category || roundName.toUpperCase();
+      room.gameState.puzzle.clue = q.clue || '';
+      room.gameState.puzzle.answer = q.answer || '';
+      room.gameState.puzzle.gridMatrix = q.gridMatrix || null;
+    }
+
+    room.gameState.puzzle.boardState = 'visible';
+    room.gameState.puzzle.revealedIndices = [];
+    room.gameState.puzzle.markedIndices = [];
+    room.gameState.puzzle.revealedLetters = [];
+
+    stopRoomAutoReveal(room);
+    broadcastRoomState(room.id);
+
+    const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.showBlank) || 'reveal.mp3';
+    if (soundFile && soundFile !== 'None') {
+      io.to(room.id).emit('sound:play', { type: 'puzzle_show', sound: soundFile });
     }
   });
 
-  // Open Topic Selection Popup state (for Vòng 1-4 and Vòng đặc biệt)
-  socket.on('round:open_selection_flow', (roundName) => {
-    gameState.currentRound = roundName;
-    const roundTopics = gameState.roundsData[roundName] || [];
-    gameState.topicSelection = {
+  // Choice 2: "Chọn 1 trong 3 chủ đề"
+  socket.on('round:start_topic_selection', (roundName) => {
+    const room = currentRoom();
+    if (!room || !roundName) return;
+
+    room.gameState.currentRound = roundName;
+    room.gameState.players.forEach(p => p.roundScore = 0);
+    room.gameState.buzzer.winner = null;
+    room.gameState.puzzle.borderColor = '#800080';
+
+    stopRoomAutoReveal(room);
+
+    let topics = (room.gameState.roundsData[roundName] || []).slice(0, 3);
+    if (topics.length === 0) {
+      topics = [
+        { category: 'CHỦ ĐỀ 1', answer: 'Ô CHỮ MỘT', clue: 'Gợi ý 1' },
+        { category: 'CHỦ ĐỀ 2', answer: 'Ô CHỮ HAI', clue: 'Gợi ý 2' },
+        { category: 'CHỦ ĐỀ 3', answer: 'Ô CHỮ BA', clue: 'Gợi ý 3' }
+      ];
+    }
+
+    room.gameState.topicSelection = {
       active: true,
       round: roundName,
-      mode: null,
-      topics: roundTopics.slice(0, 3)
-    };
-    // Board is hidden until user chooses fixed or a specific topic
-    gameState.puzzle.boardState = 'hidden';
-    gameState.buzzer.winner = null;
-    gameState.players.forEach(p => {
-      p.buzzed = false;
-      p.buzzTime = null;
-    });
-    broadcastState();
-    io.emit('sound:play', { type: 'round_change', round: roundName });
-  });
-
-  // Choice 1: "Ô chữ cố định" -> "ô chữ trống hiện ra"
-  socket.on('round:choose_fixed', (roundName) => {
-    const targetRound = roundName || gameState.currentRound;
-    gameState.currentRound = targetRound;
-    const roundTopics = gameState.roundsData[targetRound] || [];
-    const chosen = roundTopics[0] || {
-      category: 'CHỦ ĐỀ CỐ ĐỊNH',
-      clue: '',
-      answer: 'CHIẾC NÓN KỲ DIỆU'
-    };
-
-    gameState.puzzle.category = chosen.category;
-    gameState.puzzle.clue = chosen.clue || '';
-    gameState.puzzle.answer = (chosen.answer || '').toUpperCase().trim();
-    gameState.puzzle.gridMatrix = chosen.gridMatrix || buildGridMatrixFromAnswer(gameState.puzzle.answer);
-    gameState.puzzle.revealedIndices = [];
-    gameState.puzzle.markedIndices = [];
-    gameState.puzzle.revealedLetters = [];
-    // Blank boxes immediately appear!
-    gameState.puzzle.boardState = 'visible';
-    gameState.topicSelection.active = false;
-    stopAutoReveal();
-
-    broadcastState();
-    io.emit('sound:play', { type: 'puzzle_show' });
-  });
-
-  // Choice 2: "Chọn 1 trong 3 chủ đề" -> shows the 3 topics, boxes do NOT appear yet
-  socket.on('round:start_topic_selection', (roundName) => {
-    const targetRound = roundName || gameState.currentRound;
-    gameState.currentRound = targetRound;
-    const roundTopics = gameState.roundsData[targetRound] || [];
-
-    gameState.topicSelection = {
-      active: true,
-      round: targetRound,
       mode: 'choose_topic',
-      topics: roundTopics.slice(0, 3)
+      topics
     };
-    // Must choose topic before puzzle boxes appear
-    gameState.puzzle.boardState = 'hidden';
-    stopAutoReveal();
 
-    broadcastState();
+    room.gameState.puzzle.boardState = 'hidden';
+    room.gameState.puzzle.revealedIndices = [];
+    room.gameState.puzzle.markedIndices = [];
+    room.gameState.puzzle.revealedLetters = [];
+
+    broadcastRoomState(room.id);
   });
 
-  // When a topic among the 3 is selected: "phải chọn chủ đề thì ô chữ mới hiện ra"
-  socket.on('round:pick_topic', (data) => {
-    const { round, topicIndex } = data;
-    const targetRound = round || gameState.currentRound;
-    const roundTopics = gameState.roundsData[targetRound] || [];
-    const chosen = roundTopics[topicIndex] || roundTopics[0];
+  // Pick one of 3 topics
+  socket.on('round:pick_topic', ({ round, topicIndex }) => {
+    const room = currentRoom();
+    if (!room) return;
+
+    const roundName = round || room.gameState.currentRound;
+    const questions = room.gameState.roundsData[roundName] || [];
+    const chosen = questions[topicIndex] || (room.gameState.topicSelection.topics && room.gameState.topicSelection.topics[topicIndex]);
 
     if (chosen) {
-      gameState.puzzle.category = chosen.category;
-      gameState.puzzle.clue = chosen.clue || '';
-      gameState.puzzle.answer = (chosen.answer || '').toUpperCase().trim();
-      gameState.puzzle.gridMatrix = chosen.gridMatrix || buildGridMatrixFromAnswer(gameState.puzzle.answer);
-      gameState.puzzle.revealedIndices = [];
-      gameState.puzzle.markedIndices = [];
-      gameState.puzzle.revealedLetters = [];
-      // Blank boxes now appear!
-      gameState.puzzle.boardState = 'visible';
-      gameState.topicSelection.active = false;
-      stopAutoReveal();
+      room.gameState.puzzle.category = chosen.category || `CHỦ ĐỀ ${topicIndex + 1}`;
+      room.gameState.puzzle.clue = chosen.clue || '';
+      room.gameState.puzzle.answer = chosen.answer || '';
+      room.gameState.puzzle.gridMatrix = chosen.gridMatrix || null;
 
-      broadcastState();
-      io.emit('sound:play', { type: 'puzzle_show' });
+      room.gameState.topicSelection.active = false;
+      room.gameState.puzzle.boardState = 'visible';
+      room.gameState.puzzle.revealedIndices = [];
+      room.gameState.puzzle.markedIndices = [];
+      room.gameState.puzzle.revealedLetters = [];
+
+      stopRoomAutoReveal(room);
+      broadcastRoomState(room.id);
+
+      const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.showBlank) || 'reveal.mp3';
+      if (soundFile && soundFile !== 'None') {
+        io.to(room.id).emit('sound:play', { type: 'puzzle_show', sound: soundFile });
+      }
     }
   });
 
-  // Wheel selection (Nón 1 to Nón 6)
-  socket.on('wheel:select', (wheelId) => {
-    const valid = AVAILABLE_WHEELS.find(w => w.id === wheelId);
-    if (valid) {
-      gameState.wheel.selectedWheel = wheelId;
-      broadcastState();
-      io.emit('sound:play', { type: 'wheel_changed', wheel: wheelId });
-    }
-  });
-
-  let wheelSpinTimeout = null;
-
-  // Wheel Spin (22 seconds per turn! Đồng bộ góc dừng chính xác trên tất cả các máy)
+  // Wheel Spin (22s duration)
   socket.on('wheel:spin', (data = {}) => {
-    const currentAngle = gameState.wheel.currentAngle || 0;
-    // Góc quay: 18 vòng đầy đủ (6480 độ) + góc ngẫu nhiên [0..359]
+    const room = currentRoom();
+    if (!room) return;
+
+    const currentAngle = room.gameState.wheel.currentAngle || 0;
     const randomWedgeDeg = Math.floor(Math.random() * 360);
     const deltaAngle = (data.targetAngle !== undefined) ? data.targetAngle : (360 * 18 + randomWedgeDeg);
     const finalAngle = currentAngle + deltaAngle;
-    const duration = 22000; // Strictly 22 seconds
+    const duration = 22000;
     const startTime = Date.now();
 
-    gameState.wheel.spinning = true;
-    gameState.wheel.startAngle = currentAngle;
-    gameState.wheel.finalAngle = finalAngle;
-    gameState.wheel.currentAngle = finalAngle; // Authoritative destination
-    gameState.wheel.duration = duration;
-    gameState.wheel.startTime = startTime;
-    gameState.wheel.activeSpinner = data.spinner || 'controller';
+    room.gameState.wheel.spinning = true;
+    room.gameState.wheel.startAngle = currentAngle;
+    room.gameState.wheel.finalAngle = finalAngle;
+    room.gameState.wheel.currentAngle = finalAngle;
+    room.gameState.wheel.duration = duration;
+    room.gameState.wheel.startTime = startTime;
+    room.gameState.wheel.activeSpinner = data.spinner || 'controller';
 
-    if (wheelSpinTimeout) clearTimeout(wheelSpinTimeout);
-    wheelSpinTimeout = setTimeout(() => {
-      if (gameState.wheel.spinning) {
-        gameState.wheel.spinning = false;
-        gameState.players.forEach(p => p.canSpin = false);
-        gameState.wheel.lockedAll = true;
-        gameState.wheel.activeSpinner = null;
-        broadcastState();
+    if (room.wheelSpinTimeout) clearTimeout(room.wheelSpinTimeout);
+    room.wheelSpinTimeout = setTimeout(() => {
+      if (room.gameState.wheel.spinning) {
+        room.gameState.wheel.spinning = false;
+        room.gameState.players.forEach(p => p.canSpin = false);
+        room.gameState.wheel.lockedAll = true;
+        room.gameState.wheel.activeSpinner = null;
+        broadcastRoomState(room.id);
       }
     }, duration + 300);
 
-    io.emit('wheel:start_spin', {
-      startAngle: gameState.wheel.startAngle,
-      finalAngle: gameState.wheel.finalAngle,
+    io.to(room.id).emit('wheel:start_spin', {
+      startAngle: room.gameState.wheel.startAngle,
+      finalAngle: room.gameState.wheel.finalAngle,
       duration,
       startTime,
-      spinner: gameState.wheel.activeSpinner,
-      selectedWheel: gameState.wheel.selectedWheel
+      spinner: room.gameState.wheel.activeSpinner,
+      selectedWheel: room.gameState.wheel.selectedWheel,
+      music: room.gameState.spinMusic || 'Nhạc quay Nón 1.mp3'
     });
-    broadcastState();
-    io.emit('sound:play', { type: 'spin_start', duration });
+    broadcastRoomState(room.id);
+    io.to(room.id).emit('sound:play', { type: 'spin_start', duration, music: room.gameState.spinMusic || 'Nhạc quay Nón 1.mp3' });
+  });
+
+  // Soundboard broadcast handlers (scoped to room)
+  socket.on('soundboard:play', (file) => {
+    const room = currentRoom();
+    if (room) io.to(room.id).emit('soundboard:play_file', file);
+  });
+  socket.on('soundboard:stop', () => {
+    const room = currentRoom();
+    if (room) io.to(room.id).emit('soundboard:stop_all');
+  });
+  socket.on('PLAY_SOUNDBOARD', (file) => {
+    const room = currentRoom();
+    if (room) io.to(room.id).emit('soundboard:play_file', file);
+  });
+  socket.on('STOP_SOUNDBOARD', () => {
+    const room = currentRoom();
+    if (room) io.to(room.id).emit('soundboard:stop_all');
+  });
+
+  // Wheel configuration
+  socket.on('wheel:select', (wheelId) => {
+    const room = currentRoom();
+    if (!room || !wheelId) return;
+    room.gameState.wheel.selectedWheel = wheelId;
+    broadcastRoomState(room.id);
+  });
+
+  socket.on('wheel:set_spin_music', (musicFile) => {
+    const room = currentRoom();
+    if (!room || !musicFile) return;
+    room.gameState.spinMusic = musicFile.trim();
+    broadcastRoomState(room.id);
+  });
+
+  // Wheel Overlays
+  socket.on('wheel:toggle_overlay', (itemId) => {
+    const room = currentRoom();
+    if (!room || !itemId) return;
+    room.gameState.wheelOverlays[itemId] = !room.gameState.wheelOverlays[itemId];
+    broadcastRoomState(room.id);
+  });
+
+  socket.on('wheel:set_overlay', ({ itemId, visible }) => {
+    const room = currentRoom();
+    if (!room || !itemId) return;
+    room.gameState.wheelOverlays[itemId] = !!visible;
+    broadcastRoomState(room.id);
+  });
+
+  socket.on('wheel:set_all_overlays', (visible) => {
+    const room = currentRoom();
+    if (!room) return;
+    const allIds = [
+      'pn1_a', 'pn1_b', 'bm1_1', 'bm2_1', 'st1', 'dd1', 'o1000', 'o2000', 'o100k_1',
+      'pn2', 'bm1_2', 'bm2_2', 'st2', 'dd2', 'o3000', 'o4000', 'oqd', 'o100k_2',
+      't_ch', 't_qn'
+    ];
+    allIds.forEach(id => {
+      room.gameState.wheelOverlays[id] = !!visible;
+    });
+    broadcastRoomState(room.id);
+  });
+
+  socket.on('wheel:set_overlay_angle', ({ itemId, angle }) => {
+    const room = currentRoom();
+    if (!room || !itemId || angle === undefined) return;
+    if (!room.gameState.overlayAngles) room.gameState.overlayAngles = {};
+    room.gameState.overlayAngles[itemId] = Number(angle);
+    broadcastRoomState(room.id);
   });
 
   socket.on('wheel:landed', (result) => {
-    if (wheelSpinTimeout) {
-      clearTimeout(wheelSpinTimeout);
-      wheelSpinTimeout = null;
+    const room = currentRoom();
+    if (!room) return;
+    if (room.wheelSpinTimeout) {
+      clearTimeout(room.wheelSpinTimeout);
+      room.wheelSpinTimeout = null;
     }
-    if (gameState.wheel.spinning) {
-      gameState.wheel.spinning = false;
-      gameState.wheel.result = result || {};
-      gameState.players.forEach(p => p.canSpin = false);
-      gameState.wheel.lockedAll = true;
-      gameState.wheel.activeSpinner = null;
-      broadcastState();
-      io.emit('sound:play', { type: 'wheel_result', result });
+    if (room.gameState.wheel.spinning) {
+      room.gameState.wheel.spinning = false;
+      room.gameState.wheel.result = result || {};
+      room.gameState.players.forEach(p => p.canSpin = false);
+      room.gameState.wheel.lockedAll = true;
+      room.gameState.wheel.activeSpinner = null;
+      broadcastRoomState(room.id);
+      io.to(room.id).emit('sound:play', { type: 'wheel_result', result });
     }
   });
 
   socket.on('wheel:allow_player', (playerId) => {
-    if (wheelSpinTimeout) {
-      clearTimeout(wheelSpinTimeout);
-      wheelSpinTimeout = null;
+    const room = currentRoom();
+    if (!room) return;
+    if (room.wheelSpinTimeout) {
+      clearTimeout(room.wheelSpinTimeout);
+      room.wheelSpinTimeout = null;
     }
-    gameState.wheel.spinning = false;
-    gameState.wheel.lockedAll = false;
+    room.gameState.wheel.spinning = false;
+    room.gameState.wheel.lockedAll = false;
     const targetId = Number(playerId);
-    gameState.players.forEach(p => {
+    room.gameState.players.forEach(p => {
       p.canSpin = (p.id === targetId);
     });
-    broadcastState();
-    io.emit('player:spin_enabled', { playerId: targetId });
-    io.emit('sound:play', { type: 'turn_granted', playerId: targetId });
+    broadcastRoomState(room.id);
+    io.to(room.id).emit('player:spin_enabled', { playerId: targetId });
+    io.to(room.id).emit('sound:play', { type: 'turn_granted', playerId: targetId });
   });
 
   socket.on('wheel:lock_all', () => {
-    if (wheelSpinTimeout) {
-      clearTimeout(wheelSpinTimeout);
-      wheelSpinTimeout = null;
+    const room = currentRoom();
+    if (!room) return;
+    if (room.wheelSpinTimeout) {
+      clearTimeout(room.wheelSpinTimeout);
+      room.wheelSpinTimeout = null;
     }
-    gameState.wheel.lockedAll = true;
-    gameState.players.forEach(p => {
-      p.canSpin = false;
-    });
-    broadcastState();
-    io.emit('player:spin_disabled', {});
+    room.gameState.wheel.lockedAll = true;
+    room.gameState.players.forEach(p => p.canSpin = false);
+    broadcastRoomState(room.id);
+    io.to(room.id).emit('player:spin_disabled', {});
   });
 
-  // Pointer Lights & Visibility Controls
+  // Pointer Lights & Visibility
   socket.on('wheel:toggle_pointer_light', (pointer) => {
-    if (gameState.wheel.pointers && gameState.wheel.pointers[pointer]) {
-      gameState.wheel.pointers[pointer].light = !gameState.wheel.pointers[pointer].light;
-      broadcastState();
-    }
-  });
-
-  socket.on('wheel:set_pointer_light', ({ pointer, light }) => {
-    if (gameState.wheel.pointers && gameState.wheel.pointers[pointer]) {
-      gameState.wheel.pointers[pointer].light = !!light;
-      broadcastState();
+    const room = currentRoom();
+    if (room && room.gameState.wheel.pointers && room.gameState.wheel.pointers[pointer]) {
+      room.gameState.wheel.pointers[pointer].light = !room.gameState.wheel.pointers[pointer].light;
+      broadcastRoomState(room.id);
     }
   });
 
   socket.on('wheel:set_all_pointer_lights', ({ light }) => {
-    if (gameState.wheel.pointers) {
+    const room = currentRoom();
+    if (room && room.gameState.wheel.pointers) {
       ['p1', 'p2', 'p3'].forEach(k => {
-        if (gameState.wheel.pointers[k]) gameState.wheel.pointers[k].light = !!light;
+        if (room.gameState.wheel.pointers[k]) room.gameState.wheel.pointers[k].light = !!light;
       });
-      broadcastState();
+      broadcastRoomState(room.id);
     }
   });
 
   socket.on('wheel:toggle_pointer_visibility', (pointer) => {
-    if (gameState.wheel.pointers && gameState.wheel.pointers[pointer]) {
-      gameState.wheel.pointers[pointer].visible = !gameState.wheel.pointers[pointer].visible;
-      broadcastState();
-    }
-  });
-
-  socket.on('wheel:set_pointer_visibility', ({ pointer, visible }) => {
-    if (gameState.wheel.pointers && gameState.wheel.pointers[pointer]) {
-      gameState.wheel.pointers[pointer].visible = !!visible;
-      broadcastState();
+    const room = currentRoom();
+    if (room && room.gameState.wheel.pointers && room.gameState.wheel.pointers[pointer]) {
+      room.gameState.wheel.pointers[pointer].visible = !room.gameState.wheel.pointers[pointer].visible;
+      broadcastRoomState(room.id);
     }
   });
 
   // Puzzle Actions
   socket.on('puzzle:set', (data) => {
+    const room = currentRoom();
+    if (!room || !data) return;
     const { category, clue, answer, gridMatrix } = data;
     if (answer || gridMatrix) {
-      gameState.puzzle.category = category || 'CHỦ ĐỀ';
-      gameState.puzzle.clue = clue || '';
-      gameState.puzzle.answer = (answer || '').toUpperCase().trim();
-      gameState.puzzle.gridMatrix = gridMatrix || buildGridMatrixFromAnswer(gameState.puzzle.answer);
-      gameState.puzzle.revealedIndices = [];
-      gameState.puzzle.markedIndices = [];
-      gameState.puzzle.revealedLetters = [];
-      gameState.puzzle.boardState = 'hidden';
-      gameState.topicSelection.active = false;
-      stopAutoReveal();
-      broadcastState();
+      room.gameState.puzzle.category = category || 'CHỦ ĐỀ';
+      room.gameState.puzzle.clue = clue || '';
+      room.gameState.puzzle.answer = answer || '';
+      room.gameState.puzzle.gridMatrix = gridMatrix || null;
+      room.gameState.puzzle.revealedIndices = [];
+      room.gameState.puzzle.markedIndices = [];
+      room.gameState.puzzle.revealedLetters = [];
+      room.gameState.puzzle.boardState = 'visible';
+      broadcastRoomState(room.id);
     }
   });
 
   socket.on('puzzle:show', () => {
-    gameState.puzzle.boardState = 'visible';
-    gameState.puzzle.revealedIndices = [];
-    gameState.puzzle.markedIndices = [];
-    gameState.puzzle.revealedLetters = [];
-    gameState.topicSelection.active = false;
-    stopAutoReveal();
-    broadcastState();
-    io.emit('sound:play', { type: 'puzzle_show' });
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.puzzle.boardState = 'visible';
+    room.gameState.topicSelection.active = false;
+    stopRoomAutoReveal(room);
+    broadcastRoomState(room.id);
+    const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.showBlank) || 'reveal.mp3';
+    if (soundFile && soundFile !== 'None') {
+      io.to(room.id).emit('sound:play', { type: 'puzzle_show', sound: soundFile });
+    }
   });
 
   socket.on('puzzle:solve', () => {
-    const matrix = getActivePuzzleMatrix();
-    const allIndices = [];
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 16; c++) {
-        const ch = (matrix[r] && matrix[r][c]) ? matrix[r][c] : '';
-        if (ch && ch.trim()) {
-          allIndices.push(r * 16 + c);
-        }
-      }
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.puzzle.boardState = 'revealed';
+    stopRoomAutoReveal(room);
+    broadcastRoomState(room.id);
+
+    const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.solvePuzzle) || 'ClearPuzzle.mp3';
+    if (soundFile && soundFile !== 'None') {
+      io.to(room.id).emit('sound:play', { type: 'puzzle_solve', sound: soundFile });
     }
-    gameState.puzzle.revealedIndices = allIndices;
-    gameState.puzzle.markedIndices = [];
-    gameState.puzzle.boardState = 'revealed';
-    stopAutoReveal();
-    broadcastState();
-    io.emit('sound:play', { type: 'puzzle_solve' });
   });
 
   socket.on('puzzle:reset', () => {
-    gameState.puzzle.boardState = 'cleared';
-    gameState.puzzle.revealedIndices = [];
-    gameState.puzzle.markedIndices = [];
-    gameState.puzzle.revealedLetters = [];
-    gameState.puzzle.borderColor = '#800080';
-    gameState.topicSelection.active = false;
-    stopAutoReveal();
-    broadcastState();
-    io.emit('sound:play', { type: 'puzzle_reset' });
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.puzzle.boardState = 'cleared';
+    room.gameState.puzzle.revealedIndices = [];
+    room.gameState.puzzle.markedIndices = [];
+    room.gameState.puzzle.revealedLetters = [];
+    room.gameState.puzzle.borderColor = '#800080';
+    room.gameState.topicSelection.active = false;
+    stopRoomAutoReveal(room);
+    broadcastRoomState(room.id);
   });
 
-  // Ẩn/Hiện thanh chủ đề & Ẩn/Hiện câu hỏi
+  socket.on('puzzle:set_border_color', (color) => {
+    const room = currentRoom();
+    if (!room || !color) return;
+    room.gameState.puzzle.borderColor = color;
+    broadcastRoomState(room.id);
+  });
+
   socket.on('puzzle:toggle_category', () => {
-    gameState.puzzle.showCategory = !(gameState.puzzle.showCategory !== false);
-    broadcastState();
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.puzzle.showCategory = !room.gameState.puzzle.showCategory;
+    broadcastRoomState(room.id);
   });
 
   socket.on('puzzle:toggle_clue', () => {
-    gameState.puzzle.showClue = !(gameState.puzzle.showClue !== false);
-    broadcastState();
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.puzzle.showClue = !room.gameState.puzzle.showClue;
+    broadcastRoomState(room.id);
   });
 
-  socket.on('puzzle:set_category_visibility', (show) => {
-    gameState.puzzle.showCategory = !!show;
-    broadcastState();
-  });
-
-  socket.on('puzzle:set_clue_visibility', (show) => {
-    gameState.puzzle.showClue = !!show;
-    broadcastState();
-  });
-
-  // Đổi màu viền ô chữ theo yêu cầu Controller (Tím #800080, Đỏ #ff0000, Vàng #ffff00, Xanh #0000ff, Xanh lá #00ff00, Trắng #ffffff)
-  socket.on('puzzle:set_border_color', (color) => {
-    if (color) {
-      gameState.puzzle.borderColor = color;
-      broadcastState();
-    }
-  });
-
-  // 1. Check letter occurrences (Dò xem có bao nhiêu ô chứa chữ cái tương ứng theo toạ độ 4x16)
+  // Letter checking and marking
   socket.on('puzzle:check_letter', (letter) => {
-    if (!letter) return;
-    const targetChar = removeToneMarks(letter.toUpperCase());
-    const matrix = getActivePuzzleMatrix();
-    const matchingIndices = [];
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 16; c++) {
-        const ch = (matrix[r] && matrix[r][c]) ? matrix[r][c] : '';
-        if (ch && ch.trim()) {
-          const stripped = removeToneMarks(ch);
-          const cellIdx = r * 16 + c;
-          if (stripped === targetChar && !gameState.puzzle.revealedIndices.includes(cellIdx)) {
-            matchingIndices.push(cellIdx);
-          }
-        }
-      }
-    }
-    socket.emit('puzzle:check_result', {
-      letter: targetChar,
-      count: matchingIndices.length,
-      indices: matchingIndices
-    });
-    io.emit('sound:play', {
-      type: matchingIndices.length > 0 ? 'letter_correct' : 'letter_wrong',
-      count: matchingIndices.length,
-      letter: targetChar
-    });
-  });
-
-  // 2. Mở lần 1 (Đánh dấu): Các ô trống sẽ được đánh dấu (màu blue)
-  socket.on('puzzle:mark_letter', (letter) => {
-    if (!letter) return;
-    const targetChar = removeToneMarks(letter.toUpperCase());
-    const matrix = getActivePuzzleMatrix();
+    const room = currentRoom();
+    if (!room || !letter) return;
+    const cleanLetter = removeToneMarks(letter.trim().toUpperCase());
     let count = 0;
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 16; c++) {
-        const ch = (matrix[r] && matrix[r][c]) ? matrix[r][c] : '';
-        if (ch && ch.trim()) {
-          const stripped = removeToneMarks(ch);
-          const cellIdx = r * 16 + c;
-          if (stripped === targetChar && !gameState.puzzle.revealedIndices.includes(cellIdx)) {
-            if (!gameState.puzzle.markedIndices.includes(cellIdx)) {
-              gameState.puzzle.markedIndices.push(cellIdx);
+    const matchingIndices = [];
+
+    if (room.gameState.puzzle.gridMatrix && Array.isArray(room.gameState.puzzle.gridMatrix)) {
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 16; c++) {
+          const char = (room.gameState.puzzle.gridMatrix[r] && room.gameState.puzzle.gridMatrix[r][c]) ? room.gameState.puzzle.gridMatrix[r][c] : '';
+          if (char && char.trim()) {
+            const cellIdx = r * 16 + c;
+            if (removeToneMarks(char) === cleanLetter && !room.gameState.puzzle.revealedIndices.includes(cellIdx)) {
               count++;
+              matchingIndices.push(cellIdx);
             }
           }
         }
       }
-    }
-    broadcastState();
-    io.emit('sound:play', { type: count > 0 ? 'letter_correct' : 'letter_wrong', count, letter: targetChar });
-  });
-
-  // 3. Mở lần 2 (Mở chữ): Các ô đánh dấu được mở (không hiện dấu thanh hỏi, sắc, huyền, ngã, nặng)
-  socket.on('puzzle:reveal_marked', (letter) => {
-    if (gameState.puzzle.markedIndices && gameState.puzzle.markedIndices.length > 0) {
-      gameState.puzzle.markedIndices.forEach(idx => {
-        if (!gameState.puzzle.revealedIndices.includes(idx)) {
-          gameState.puzzle.revealedIndices.push(idx);
+    } else if (room.gameState.puzzle.answer) {
+      const chars = room.gameState.puzzle.answer.toUpperCase().split('');
+      for (let i = 0; i < chars.length; i++) {
+        const c = chars[i];
+        if (c !== ' ' && removeToneMarks(c) === cleanLetter && !room.gameState.puzzle.revealedIndices.includes(i)) {
+          count++;
+          matchingIndices.push(i);
         }
-      });
-      gameState.puzzle.markedIndices = [];
-    }
-    if (letter) {
-      const char = removeToneMarks(letter.toUpperCase());
-      if (!gameState.puzzle.revealedLetters.includes(char)) {
-        gameState.puzzle.revealedLetters.push(char);
       }
     }
-    broadcastState();
-    io.emit('sound:play', { type: 'letter_correct' });
+
+    socket.emit('puzzle:check_result', {
+      letter: cleanLetter,
+      count,
+      indices: matchingIndices
+    });
+  });
+
+  // Step 1: Mark matching letters (Blue)
+  socket.on('puzzle:mark_letter', (letter) => {
+    const room = currentRoom();
+    if (!room || !letter) return;
+    const cleanLetter = removeToneMarks(letter.trim().toUpperCase());
+    const newlyMarked = [];
+
+    if (room.gameState.puzzle.gridMatrix && Array.isArray(room.gameState.puzzle.gridMatrix)) {
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 16; c++) {
+          const char = (room.gameState.puzzle.gridMatrix[r] && room.gameState.puzzle.gridMatrix[r][c]) ? room.gameState.puzzle.gridMatrix[r][c] : '';
+          if (char && char.trim()) {
+            const cellIdx = r * 16 + c;
+            if (removeToneMarks(char) === cleanLetter && !room.gameState.puzzle.revealedIndices.includes(cellIdx)) {
+              newlyMarked.push(cellIdx);
+            }
+          }
+        }
+      }
+    } else if (room.gameState.puzzle.answer) {
+      const chars = room.gameState.puzzle.answer.toUpperCase().split('');
+      for (let i = 0; i < chars.length; i++) {
+        const c = chars[i];
+        if (c !== ' ' && removeToneMarks(c) === cleanLetter && !room.gameState.puzzle.revealedIndices.includes(i)) {
+          newlyMarked.push(i);
+        }
+      }
+    }
+
+    room.gameState.puzzle.markedIndices = newlyMarked;
+    broadcastRoomState(room.id);
+
+    const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.markLetter) || 'ding.wav';
+    if (soundFile && soundFile !== 'None') {
+      io.to(room.id).emit('sound:play', { type: 'letter_mark', sound: soundFile });
+    }
+  });
+
+  // Step 2: Reveal marked letters
+  socket.on('puzzle:reveal_marked', (letter) => {
+    const room = currentRoom();
+    if (!room) return;
+    const marked = room.gameState.puzzle.markedIndices || [];
+    if (marked.length > 0) {
+      room.gameState.puzzle.revealedIndices = Array.from(new Set([...room.gameState.puzzle.revealedIndices, ...marked]));
+      room.gameState.puzzle.markedIndices = [];
+      if (letter) {
+        const cleanLetter = removeToneMarks(letter.trim().toUpperCase());
+        if (!room.gameState.puzzle.revealedLetters.includes(cleanLetter)) {
+          room.gameState.puzzle.revealedLetters.push(cleanLetter);
+        }
+      }
+
+      broadcastRoomState(room.id);
+
+      const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.openLetter) || '2nd_ding.wav';
+      if (soundFile && soundFile !== 'None') {
+        io.to(room.id).emit('sound:play', { type: 'letter_open', sound: soundFile });
+      }
+    }
   });
 
   socket.on('puzzle:clear_marked', () => {
-    gameState.puzzle.markedIndices = [];
-    broadcastState();
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.puzzle.markedIndices = [];
+    broadcastRoomState(room.id);
   });
 
-  socket.on('puzzle:reveal_single_letter', (letter) => {
-    if (!letter) return;
-    const targetChar = removeToneMarks(letter.toUpperCase());
-    const matrix = getActivePuzzleMatrix();
-    let count = 0;
+  // Auto Letter Reveal
+  socket.on('puzzle:start_reveal', (options = {}) => {
+    const room = currentRoom();
+    if (!room) return;
+    const intervalMs = options.intervalMs || 1500;
+    stopRoomAutoReveal(room);
 
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 16; c++) {
-        const ch = (matrix[r] && matrix[r][c]) ? matrix[r][c] : '';
-        if (ch && ch.trim()) {
-          const stripped = removeToneMarks(ch);
-          const cellIdx = r * 16 + c;
-          if (stripped === targetChar) {
-            if (!gameState.puzzle.revealedIndices.includes(cellIdx)) {
-              gameState.puzzle.revealedIndices.push(cellIdx);
-              count++;
-            }
-            const mIdx = gameState.puzzle.markedIndices.indexOf(cellIdx);
-            if (mIdx !== -1) {
-              gameState.puzzle.markedIndices.splice(mIdx, 1);
+    room.gameState.revealProgress.active = true;
+    room.gameState.revealProgress.intervalMs = intervalMs;
+    room.gameState.puzzle.borderColor = '#800080';
+
+    room.revealIntervalTimer = setInterval(() => {
+      let unrevealed = [];
+      if (room.gameState.puzzle.gridMatrix && Array.isArray(room.gameState.puzzle.gridMatrix)) {
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 16; c++) {
+            const char = (room.gameState.puzzle.gridMatrix[r] && room.gameState.puzzle.gridMatrix[r][c]) ? room.gameState.puzzle.gridMatrix[r][c] : '';
+            if (char && char.trim()) {
+              const cellIdx = r * 16 + c;
+              if (!room.gameState.puzzle.revealedIndices.includes(cellIdx)) {
+                unrevealed.push(cellIdx);
+              }
             }
           }
         }
+      } else if (room.gameState.puzzle.answer) {
+        const chars = room.gameState.puzzle.answer.toUpperCase().split('');
+        for (let i = 0; i < chars.length; i++) {
+          if (chars[i] !== ' ' && !room.gameState.puzzle.revealedIndices.includes(i)) {
+            unrevealed.push(i);
+          }
+        }
       }
-    }
-    if (!gameState.puzzle.revealedLetters.includes(targetChar)) {
-      gameState.puzzle.revealedLetters.push(targetChar);
-    }
-    if (gameState.puzzle.boardState !== 'visible' && gameState.puzzle.boardState !== 'revealed') {
-      gameState.puzzle.boardState = 'visible';
-    }
-    broadcastState();
-    io.emit('sound:play', { type: count > 0 ? 'letter_correct' : 'letter_wrong', count, letter: targetChar });
-  });
 
-  // Nút bắt đầu hiện chữ: Các ô trống lần lượt hiện chữ, đồng thời chuông của cả 3 người chơi được mở.
-  socket.on('puzzle:start_reveal', (options = {}) => {
-    if (gameState.puzzle.boardState !== 'visible') {
-      gameState.puzzle.boardState = 'visible';
-    }
-    stopAutoReveal();
-    gameState.revealProgress.active = true;
-    gameState.revealProgress.intervalMs = options.intervalMs || 1500;
-
-    // Mở chuông của cả 3 người chơi
-    gameState.buzzer.enabled = true;
-    gameState.buzzer.winner = null;
-    gameState.buzzer.timestamp = null;
-    gameState.players.forEach(p => {
-      p.buzzed = false;
-      p.buzzTime = null;
-    });
-
-    revealIntervalTimer = setInterval(() => {
-      const unrevealed = getUnrevealedCharIndices();
       if (unrevealed.length === 0) {
-        stopAutoReveal();
-        gameState.buzzer.enabled = false;
-        gameState.puzzle.boardState = 'revealed';
-        broadcastState();
-        io.emit('sound:play', { type: 'puzzle_solve' });
+        stopRoomAutoReveal(room);
+        broadcastRoomState(room.id);
         return;
       }
-      const nextIndex = unrevealed[0];
-      gameState.puzzle.revealedIndices.push(nextIndex);
-      broadcastState();
-      io.emit('sound:play', { type: 'letter_flip' });
-    }, gameState.revealProgress.intervalMs);
 
-    broadcastState();
+      const randomIndex = Math.floor(Math.random() * unrevealed.length);
+      const nextIndex = unrevealed[randomIndex];
+      room.gameState.puzzle.revealedIndices.push(nextIndex);
+      broadcastRoomState(room.id);
+      io.to(room.id).emit('sound:play', { type: 'letter_flip' });
+    }, intervalMs);
+
+    broadcastRoomState(room.id);
   });
 
-  // Dừng hiện chữ: Ngưng việc lật chữ lại.
   socket.on('puzzle:stop_reveal', () => {
-    stopAutoReveal();
-    gameState.buzzer.enabled = false;
-    broadcastState();
+    const room = currentRoom();
+    if (room) {
+      stopRoomAutoReveal(room);
+      broadcastRoomState(room.id);
+    }
   });
 
-  // Tiếp tục hiện chữ: Các ô trống còn lại tiếp tục lần lượt hiện chữ, đồng thời chuông của cả 3 người chơi được mở, khung bảng trở về màu tím (#800080).
   socket.on('puzzle:resume_reveal', () => {
-    if (gameState.puzzle.boardState !== 'visible') {
-      gameState.puzzle.boardState = 'visible';
-    }
-    stopAutoReveal();
-    gameState.revealProgress.active = true;
+    const room = currentRoom();
+    if (!room) return;
+    stopRoomAutoReveal(room);
 
-    // Khung bảng ô chữ trở về màu tím (#800080)
-    gameState.puzzle.borderColor = '#800080';
+    room.gameState.revealProgress.active = true;
+    room.gameState.puzzle.borderColor = '#800080';
 
-    // Chuông của cả 3 người chơi được mở
-    gameState.buzzer.enabled = true;
-    gameState.buzzer.winner = null;
-    gameState.buzzer.timestamp = null;
-    gameState.players.forEach(p => {
-      p.buzzed = false;
-      p.buzzTime = null;
-    });
+    room.revealIntervalTimer = setInterval(() => {
+      let unrevealed = [];
+      if (room.gameState.puzzle.gridMatrix && Array.isArray(room.gameState.puzzle.gridMatrix)) {
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 16; c++) {
+            const char = (room.gameState.puzzle.gridMatrix[r] && room.gameState.puzzle.gridMatrix[r][c]) ? room.gameState.puzzle.gridMatrix[r][c] : '';
+            if (char && char.trim()) {
+              const cellIdx = r * 16 + c;
+              if (!room.gameState.puzzle.revealedIndices.includes(cellIdx)) {
+                unrevealed.push(cellIdx);
+              }
+            }
+          }
+        }
+      } else if (room.gameState.puzzle.answer) {
+        const chars = room.gameState.puzzle.answer.toUpperCase().split('');
+        for (let i = 0; i < chars.length; i++) {
+          if (chars[i] !== ' ' && !room.gameState.puzzle.revealedIndices.includes(i)) {
+            unrevealed.push(i);
+          }
+        }
+      }
 
-    revealIntervalTimer = setInterval(() => {
-      const unrevealed = getUnrevealedCharIndices();
       if (unrevealed.length === 0) {
-        stopAutoReveal();
-        gameState.buzzer.enabled = false;
-        gameState.puzzle.boardState = 'revealed';
-        broadcastState();
-        io.emit('sound:play', { type: 'puzzle_solve' });
+        stopRoomAutoReveal(room);
+        broadcastRoomState(room.id);
         return;
       }
-      const nextIndex = unrevealed[0];
-      gameState.puzzle.revealedIndices.push(nextIndex);
-      broadcastState();
-      io.emit('sound:play', { type: 'letter_flip' });
-    }, gameState.revealProgress.intervalMs || 1500);
+      const randomIndex = Math.floor(Math.random() * unrevealed.length);
+      const nextIndex = unrevealed[randomIndex];
+      room.gameState.puzzle.revealedIndices.push(nextIndex);
+      broadcastRoomState(room.id);
+      io.to(room.id).emit('sound:play', { type: 'letter_flip' });
+    }, room.gameState.revealProgress.intervalMs || 800);
 
-    broadcastState();
+    broadcastRoomState(room.id);
   });
 
   // Buzzer Controls
-  // Nếu có 1 người bấm: tương đương với việc bấm nút Dừng hiện chữ và chuông của 2 người còn lại không bấm được. Khung bảng ô chữ đổi sang màu của người bấm chuông (P1: Đỏ #ff0000, P2: Vàng #ffff00, P3: Xanh #0000ff).
   socket.on('buzzer:press', (playerId) => {
-    const player = gameState.players.find(p => p.id === Number(playerId));
-    if (player && gameState.buzzer.enabled && !gameState.buzzer.winner) {
-      gameState.buzzer.winner = player.id;
-      gameState.buzzer.timestamp = Date.now();
-      gameState.buzzer.enabled = false; // Chuông của 2 người còn lại KHÔNG bấm được!
+    const room = currentRoom();
+    if (!room) return;
+
+    const player = room.gameState.players.find(p => p.id === Number(playerId));
+    if (player && room.gameState.buzzer.enabled && !room.gameState.buzzer.winner) {
+      room.gameState.buzzer.winner = player.id;
+      room.gameState.buzzer.timestamp = Date.now();
+      room.gameState.buzzer.enabled = false;
       player.buzzed = true;
       player.buzzTime = new Date().toLocaleTimeString();
 
-      // Khi Player bấm chuông, khung bảng ô chữ cũng đổi sang màu tương ứng
-      if (player.id === 1) {
-        gameState.puzzle.borderColor = '#ff0000'; // Đỏ
-      } else if (player.id === 2) {
-        gameState.puzzle.borderColor = '#ffff00'; // Vàng
-      } else if (player.id === 3) {
-        gameState.puzzle.borderColor = '#0000ff'; // Xanh
+      if (player.id === 1) room.gameState.puzzle.borderColor = '#ff0000';
+      else if (player.id === 2) room.gameState.puzzle.borderColor = '#ffff00';
+      else if (player.id === 3) room.gameState.puzzle.borderColor = '#0000ff';
+
+      if (room.gameState.revealProgress.active) {
+        stopRoomAutoReveal(room);
       }
 
-      // Tương đương với việc bấm nút Dừng hiện chữ
-      if (gameState.revealProgress.active) {
-        stopAutoReveal();
-      }
-
-      broadcastState();
-      io.emit('sound:play', { type: 'buzzer_hit', player });
+      broadcastRoomState(room.id);
+      io.to(room.id).emit('sound:play', { type: 'buzzer_hit', player });
     }
   });
 
-  // 4 hành động chuông theo yêu cầu: Mở chuông, Khóa chuông, Reset và mở, Reset và khóa
-  // 1. Mở chuông
   socket.on('buzzer:enable', () => {
-    gameState.buzzer.enabled = true;
-    gameState.buzzer.winner = null;
-    gameState.buzzer.timestamp = null;
-    gameState.players.forEach(p => {
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.buzzer.enabled = true;
+    room.gameState.buzzer.winner = null;
+    room.gameState.buzzer.timestamp = null;
+    room.gameState.players.forEach(p => {
       p.buzzed = false;
       p.buzzTime = null;
     });
-    broadcastState();
+    broadcastRoomState(room.id);
   });
 
-  // 2. Khóa chuông
   socket.on('buzzer:disable', () => {
-    gameState.buzzer.enabled = false;
-    broadcastState();
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.buzzer.enabled = false;
+    broadcastRoomState(room.id);
   });
 
-  // 3. Reset và mở
   socket.on('buzzer:reset_and_enable', () => {
-    gameState.buzzer.winner = null;
-    gameState.buzzer.timestamp = null;
-    gameState.buzzer.enabled = true;
-    gameState.puzzle.borderColor = '#800080';
-    gameState.players.forEach(p => {
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.buzzer.winner = null;
+    room.gameState.buzzer.timestamp = null;
+    room.gameState.buzzer.enabled = true;
+    room.gameState.puzzle.borderColor = '#800080';
+    room.gameState.players.forEach(p => {
       p.buzzed = false;
       p.buzzTime = null;
     });
-    broadcastState();
+    broadcastRoomState(room.id);
   });
 
-  // 4. Reset và khóa
   socket.on('buzzer:reset_and_disable', () => {
-    gameState.buzzer.winner = null;
-    gameState.buzzer.timestamp = null;
-    gameState.buzzer.enabled = false;
-    gameState.puzzle.borderColor = '#800080';
-    gameState.players.forEach(p => {
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.buzzer.winner = null;
+    room.gameState.buzzer.timestamp = null;
+    room.gameState.buzzer.enabled = false;
+    room.gameState.puzzle.borderColor = '#800080';
+    room.gameState.players.forEach(p => {
       p.buzzed = false;
       p.buzzTime = null;
     });
-    broadcastState();
+    broadcastRoomState(room.id);
   });
 
-  // Backward compatibility
-  socket.on('buzzer:reset', () => {
-    gameState.buzzer.winner = null;
-    gameState.buzzer.timestamp = null;
-    gameState.buzzer.enabled = false;
-    gameState.puzzle.borderColor = '#800080';
-    gameState.players.forEach(p => {
-      p.buzzed = false;
-      p.buzzTime = null;
-    });
-    broadcastState();
-  });
-
-  // Import parsed rounds data from Excel
   socket.on('rounds:import_data', (importedRounds) => {
-    if (importedRounds && typeof importedRounds === 'object') {
-      gameState.roundsData = { ...gameState.roundsData, ...importedRounds };
-      broadcastState();
-      socket.emit('rounds:imported_success', {
-        sheetCount: Object.keys(importedRounds).length
-      });
-    }
+    const room = currentRoom();
+    if (!room || !importedRounds) return;
+    room.gameState.roundsData = { ...room.gameState.roundsData, ...importedRounds };
+    broadcastRoomState(room.id);
+    socket.emit('rounds:imported_success', {
+      sheetCount: Object.keys(importedRounds).length
+    });
   });
 
-  // Full reset
+  // Full reset for room
   socket.on('game:reset_all', () => {
-    gameState.players.forEach((p, idx) => {
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.players.forEach((p, idx) => {
       p.name = `Người chơi ${idx + 1}`;
       p.roundScore = 0;
       p.totalScore = 0;
@@ -1102,41 +1284,94 @@ io.on('connection', (socket) => {
       p.buzzed = false;
       p.buzzTime = null;
     });
-    gameState.currentRound = 'Vòng 1';
-    gameState.puzzle.boardState = 'hidden';
-    gameState.puzzle.revealedIndices = [];
-    gameState.puzzle.revealedLetters = [];
-    gameState.puzzle.borderColor = '#800080';
-    gameState.topicSelection.active = false;
-    stopAutoReveal();
-    gameState.wheel.spinning = false;
-    gameState.wheel.result = null;
-    gameState.wheel.lockedAll = true;
-    gameState.wheel.selectedWheel = 'vong7.png';
-    gameState.buzzer.winner = null;
-    broadcastState();
+    room.gameState.currentRound = 'Vòng 1';
+    room.gameState.puzzle.boardState = 'hidden';
+    room.gameState.puzzle.revealedIndices = [];
+    room.gameState.puzzle.revealedLetters = [];
+    room.gameState.puzzle.borderColor = '#800080';
+    room.gameState.topicSelection.active = false;
+    stopRoomAutoReveal(room);
+    room.gameState.wheel.spinning = false;
+    room.gameState.wheel.result = null;
+    room.gameState.wheel.lockedAll = true;
+    room.gameState.wheel.selectedWheel = 'vong7.png';
+    room.gameState.buzzer.winner = null;
+    broadcastRoomState(room.id);
   });
 });
 
-// REST Endpoints
+// REST ENDPOINTS
+
+// Room management endpoints
+app.post('/api/room/create', (req, res) => {
+  const { roomId, passwords } = req.body || {};
+  const room = createRoom(roomId, passwords);
+  res.json({
+    success: true,
+    roomId: room.id,
+    passwords: room.passwords
+  });
+});
+
+app.post('/api/room/verify', (req, res) => {
+  const { roomId, slot, auth } = req.body || {};
+  const room = getRoom(roomId);
+  if (!room) {
+    return res.status(404).json({ success: false, message: 'Mã phòng không tồn tại!' });
+  }
+
+  if (slot) {
+    const pSlot = Number(slot);
+    const expectedPass = room.passwords[pSlot] || room.passwords['p' + pSlot] || room.passwords[String(pSlot)];
+    if (!auth || String(auth).trim() !== String(expectedPass).trim()) {
+      return res.status(401).json({ success: false, message: 'Mật khẩu vị trí này không chính xác!' });
+    }
+  }
+
+  res.json({
+    success: true,
+    roomId: room.id,
+    slot: Number(slot) || null
+  });
+});
+
+app.get('/api/room/info', (req, res) => {
+  const roomId = req.query.roomid;
+  const room = getRoom(roomId);
+  if (!room) {
+    return res.status(404).json({ exists: false });
+  }
+  res.json({
+    exists: true,
+    roomId: room.id,
+    passwords: room.passwords
+  });
+});
+
 app.get('/api/state', (req, res) => {
-  ensureWheelStateCurrent();
-  res.json(gameState);
+  const roomId = req.query.roomid;
+  const room = getRoom(roomId) || getRoom('100000');
+  if (!room) {
+    return res.json(createNewGameState());
+  }
+
+  const role = req.query.role;
+  if (role === 'controller' || role === 'host') {
+    res.json(room.gameState);
+  } else {
+    res.json(sanitizeGameStateForPublic(room.gameState));
+  }
 });
 
 app.get('/api/wheels', (req, res) => {
   res.json(AVAILABLE_WHEELS);
 });
 
-app.get('/api/rounds', (req, res) => {
-  res.json(gameState.roundsData);
-});
-
-// Serve static assets from public and root folder
+// Static assets
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
-// Route handlers for the 7 requested pages
+// HTML Page Route aliases
 const pages = [
   'Controller',
   'Host',
@@ -1162,19 +1397,11 @@ pages.forEach((page) => {
   });
 });
 
-// Root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Chiếc Nón Kỳ Diệu Game Server running on port ${PORT}`);
-  console.log(`Available screens:`);
-  console.log(` - http://localhost:${PORT}/Controller.html`);
-  console.log(` - http://localhost:${PORT}/Host.html`);
-  console.log(` - http://localhost:${PORT}/Puzzleboard.html`);
-  console.log(` - http://localhost:${PORT}/Wheel.html`);
-  console.log(` - http://localhost:${PORT}/Player1.html`);
-  console.log(` - http://localhost:${PORT}/Player2.html`);
-  console.log(` - http://localhost:${PORT}/Player3.html`);
+  console.log(`Ready for production & Render deployments`);
 });

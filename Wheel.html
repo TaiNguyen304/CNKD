@@ -6,6 +6,7 @@
   <title>Chiếc Nón Kỳ Diệu - Wheel</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/sounds.js"></script>
   <script src="/disableDevTools.js"></script>
   <style>
     :root {
@@ -105,10 +106,49 @@
     </div>
   </div>
 
+  <!-- MISSING ROOM OVERLAY NOTIFICATION -->
+  <div id="missingRoomOverlay" class="hidden fixed inset-0 z-50 bg-slate-950/95 flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-slate-900 border-4 border-amber-500 rounded-2xl p-6 text-center space-y-4 shadow-2xl">
+      <div class="text-4xl">⚠️</div>
+      <h2 class="text-xl text-amber-400 font-black">THIẾU MÃ PHÒNG</h2>
+      <p class="text-base text-rose-300 font-black">
+        Vui lòng nhập tham số ?roomid=Mã phòng trên URL
+      </p>
+      <div class="pt-2 flex flex-col gap-2">
+        <input
+          type="text"
+          id="overlayRoomInput"
+          placeholder="Nhập mã phòng (6 số)..."
+          class="w-full px-4 py-2.5 bg-slate-950 border-2 border-slate-700 rounded-xl text-center text-white text-lg tracking-widest font-mono"
+        />
+        <button
+          onclick="submitRoomFromOverlay()"
+          class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl cursor-pointer"
+        >
+          Vào phòng
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const socket = io();
     const canvas = document.getElementById('wheelCanvas');
     const ctx = canvas.getContext('2d');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomid');
+
+    function submitRoomFromOverlay() {
+      const input = document.getElementById('overlayRoomInput').value.trim();
+      if (input) {
+        window.location.href = window.location.pathname + '?roomid=' + encodeURIComponent(input);
+      }
+    }
+
+    if (!roomId) {
+      document.getElementById('missingRoomOverlay').classList.remove('hidden');
+    }
     
     // 3 Pointers Elements
     const pointerWrapper1 = document.getElementById('pointerWrapper1');
@@ -173,6 +213,42 @@
     const wheelImages = {};
     let activeWheelImage = null;
     let currentWheelId = 'vong7.png';
+
+    // Slice & Card Overlays (Ẩn/Hiện ô thẻ)
+    const sliceItems = [
+      { id: 'pn1_a', name: 'Ô Phần thưởng 1 (Kiểu 1)', file: 'Ô Phần thưởng 1.png', angles: [307.5], type: 'kieu1', imgW: 142, imgH: 298 },
+      { id: 'pn1_b', name: 'Ô Phần thưởng 2 (Kiểu 1)', file: 'Ô Phần thưởng 1.png', angles: [37.5, 142.5], type: 'kieu1', imgW: 142, imgH: 298 },
+      { id: 'bm1_1', name: 'Ô bí mật 1 (Kiểu 1)', file: 'Ô Bí Mật 1.png', angles: [37.5], type: 'kieu1', imgW: 143, imgH: 300 },
+      { id: 'bm2_1', name: 'Ô bí mật 2 (Kiểu 1)', file: 'Ô Bí Mật 1.png', angles: [217.5], type: 'kieu1', imgW: 143, imgH: 300 },
+      { id: 'st1', name: 'Ô Siêu tốc (Kiểu 1)', file: 'Ô Siêu Tốc 1.png', angles: [37.5], type: 'kieu1', imgW: 145, imgH: 302 },
+      { id: 'dd1', name: 'Ô Đổi điểm (Kiểu 1)', file: 'Ô Đổi điểm 1.png', angles: [37.5], type: 'kieu1', imgW: 145, imgH: 300 },
+      { id: 'o1000', name: 'Ô 1.000', file: 'Ô 1000.png', angles: [262.5], type: 'kieu1', imgW: 145, imgH: 302 },
+      { id: 'o2000', name: 'Ô 2.000', file: 'Ô 2000.png', angles: [232.5], type: 'kieu1', imgW: 145, imgH: 300 },
+      { id: 'o100k_1', name: 'Ô 100.000 (Kiểu 1)', file: 'Ô 100000 1.png', angles: [172.5], type: 'kieu1', imgW: 143, imgH: 297 },
+      { id: 'pn2', name: 'Ô Phần thưởng (Kiểu 2)', file: 'Ô Phần thưởng 2.png', angles: [172.5, 202.5], type: 'kieu2', imgW: 148, imgH: 524 },
+      { id: 'bm1_2', name: 'Ô bí mật 1 (Kiểu 2)', file: 'Ô Bí Mật 2.png', angles: [172.5, 202.5], type: 'kieu2', imgW: 146, imgH: 522 },
+      { id: 'bm2_2', name: 'Ô bí mật 2 (Kiểu 2)', file: 'Ô Bí Mật 2.png', angles: [262.5, 337.5], type: 'kieu2', imgW: 146, imgH: 522 },
+      { id: 'st2', name: 'Ô Siêu tốc (Kiểu 2)', file: 'Ô Siêu Tốc 2.png', angles: [172.5, 202.5], type: 'kieu2', imgW: 141, imgH: 518 },
+      { id: 'dd2', name: 'Ô Đổi điểm (Kiểu 2)', file: 'Ô Đổi điểm 2.png', angles: [172.5, 202.5], type: 'kieu2', imgW: 147, imgH: 520 },
+      { id: 'o3000', name: 'Ô 3.000', file: 'Ô 3000.png', angles: [37.5, 157.5], type: 'kieu2', imgW: 149, imgH: 524 },
+      { id: 'o4000', name: 'Ô 4.000', file: 'Ô 4000.png', angles: [37.5, 157.5], type: 'kieu2', imgW: 148, imgH: 519 },
+      { id: 'oqd', name: 'Ô Quy đổi', file: 'Ô Quy đổi.png', angles: [262.5, 337.5], type: 'kieu2', imgW: 149, imgH: 524 },
+      { id: 'o100k_2', name: 'Ô 100.000 (Kiểu 2)', file: 'Ô 100000 2.png', angles: [127.5, 142.5], type: 'kieu2', imgW: 153, imgH: 521 },
+      { id: 't_ch', name: 'Thẻ Cơ hội', file: 'Thẻ Cơ hội.png', angles: [7.5, 22.5, 82.5], type: 'card', imgW: 116, imgH: 151 },
+      { id: 't_qn', name: 'Thẻ Quyền năng', file: 'Thẻ Quyền năng.png', angles: [112.5, 277.5, 292.5], type: 'card', imgW: 155, imgH: 212 },
+    ];
+
+    let activeWheelOverlays = {};
+    let activeOverlayAngles = {};
+    const overlayImages = {};
+    sliceItems.forEach(item => {
+      if (!overlayImages[item.file]) {
+        const img = new Image();
+        img.src = `/${encodeURIComponent(item.file)}`;
+        img.onload = () => { drawWheel(); };
+        overlayImages[item.file] = img;
+      }
+    });
 
     const allWheelFiles = ['vong7.png', 'vong13.png', 'vong14.png', 'vong18.png', 'vong19.png', 'vong23.png'];
     allWheelFiles.forEach(file => {
@@ -245,6 +321,71 @@
           radius * 2
         );
         ctx.restore();
+
+        // Viền ngoài rìa Nón (Dính liền với Nón, đè lên vùng ảnh trống ngoài mặt Nón, không đè lên mặt Nón)
+        // Đối với Nón 1 (vong7.png), chèn thêm viền đen #000000. Với các mặt Nón còn lại, màu viền là #4472C4.
+        const isWheel1 = (currentWheelId === 'vong7.png' || currentWheelId === '1' || currentWheelId === 1 || currentWheelId === 'Nón 1');
+        const borderColor = isWheel1 ? '#000000' : '#4472C4';
+        const strokeW = 12; // 12px viền ngoài
+        const faceRadius = (508 / 540) * radius; // Mép ngoài mặt Nón (~357.5px)
+        const ringRadius = faceRadius + (strokeW / 2); // Tâm đường viền
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, ringRadius, 0, 2 * Math.PI);
+        ctx.lineWidth = strokeW;
+        ctx.strokeStyle = borderColor;
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw active slice / card overlays
+        if (activeWheelOverlays) {
+          sliceItems.forEach(item => {
+            if (activeWheelOverlays[item.id]) {
+              const img = overlayImages[item.file];
+              if (img && img.complete && img.naturalWidth > 0) {
+                // Determine angles to draw: if multiple angles exist, draw ONLY selected angle
+                let anglesToDraw = item.angles;
+                if (item.angles.length > 1) {
+                  const selAngle = (activeOverlayAngles && activeOverlayAngles[item.id] !== undefined)
+                    ? activeOverlayAngles[item.id]
+                    : item.angles[0];
+                  anglesToDraw = [selAngle];
+                }
+
+                anglesToDraw.forEach(angleDeg => {
+                  ctx.save();
+                  ctx.rotate((angleDeg * Math.PI) / 180);
+
+                  if (item.type === 'kieu1') {
+                    // Kiểu 1: Khớp kích thước 1 ô trên Nón 1 (vong7.png), kéo dài thêm 2-4px phủ kín viền trên
+                    const w = ((item.imgW || 143) / 540) * radius;
+                    const h = (((item.imgH || 300) + 6) / 540) * radius;
+                    const topY = - (512 / 540) * radius;
+                    ctx.drawImage(img, -w / 2, topY, w, h);
+                  } else if (item.type === 'kieu2') {
+                    // Kiểu 2: Khớp kích thước 1 ô ở Nón 3 (vong14.png) và Nón 5 (vong19.png), kéo dài thêm 2-4px phủ kín viền trên
+                    const w = ((item.imgW || 148) / 540) * radius;
+                    const h = (((item.imgH || 520) + 6) / 540) * radius;
+                    const topY = - (518 / 540) * radius;
+                    ctx.drawImage(img, -w / 2, topY, w, h);
+                  } else if (item.type === 'card') {
+                    // Thẻ đặt sát mép Nón 1 chút (centerY = -0.77 * radius)
+                    const cardW = 0.125 * radius;
+                    const aspect = (item.imgW && item.imgH) ? (item.imgW / item.imgH) : (116 / 151);
+                    const cardH = cardW / aspect;
+                    const centerY = - 0.77 * radius;
+                    ctx.drawImage(img, -cardW / 2, centerY - cardH / 2, cardW, cardH);
+                  } else {
+                    ctx.drawImage(img, -radius, -radius, radius * 2, radius * 2);
+                  }
+
+                  ctx.restore();
+                });
+              }
+            }
+          });
+        }
       } else {
         // Fallback clean neutral disk while texture loads (BỎ HOÀN TOÀN CÁC Ô CHỨA TEXT)
         ctx.beginPath();
@@ -336,6 +477,13 @@
     function syncWheelState(state) {
       if (!state || !state.wheel) return;
 
+      if (state.wheelOverlays) {
+        activeWheelOverlays = state.wheelOverlays;
+      }
+      if (state.overlayAngles) {
+        activeOverlayAngles = state.overlayAngles;
+      }
+
       if (state.wheel.selectedWheel && state.wheel.selectedWheel !== currentWheelId) {
         currentWheelId = state.wheel.selectedWheel;
         loadWheelImage(currentWheelId);
@@ -389,7 +537,9 @@
     }
 
     socket.on('connect', () => {
-      socket.emit('state:request');
+      if (roomId) {
+        socket.emit('room:join', { roomId, role: 'wheel' });
+      }
     });
 
     socket.on('game:state', (state) => {
@@ -397,10 +547,12 @@
     });
 
     // Tự động đồng bộ ngay lập tức khi F5 / Reload / Vào muộn
-    fetch('/api/state')
-      .then(res => res.json())
-      .then(syncWheelState)
-      .catch(() => {});
+    if (roomId) {
+      fetch('/api/state?roomid=' + encodeURIComponent(roomId))
+        .then(res => res.json())
+        .then(syncWheelState)
+        .catch(() => {});
+    }
 
     // Initial draw
     drawWheel();

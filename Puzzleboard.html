@@ -6,9 +6,38 @@
   <title>Bảng Ô Chữ - Chiếc Nón Kỳ Diệu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/sounds.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script src="/disableDevTools.js"></script>
   <style>
+    @font-face {
+      font-family: 'SVN-Gilroy Bold';
+      src: url('/SVN-Gilroy Bold.otf') format('opentype'),
+           url('./SVN-Gilroy Bold.otf') format('opentype');
+      font-weight: bold;
+      font-style: normal;
+    }
+
+    @font-face {
+      font-family: 'Myriad Pro Bold';
+      src: url('/MYRIADPRO-BOLD.OTF') format('opentype'),
+           url('./MYRIADPRO-BOLD.OTF') format('opentype');
+      font-weight: bold;
+      font-style: normal;
+    }
+
+    /* 3 ô điểm trên Puzzleboard: dùng font SVN-Gilroy Bold cho cả tên và số điểm */
+    #p1_podium, #p2_podium, #p3_podium,
+    #p1_name, #p2_name, #p3_name,
+    #p1_score, #p2_score, #p3_score {
+      font-family: 'SVN-Gilroy Bold', 'Segoe UI', sans-serif !important;
+    }
+
+    /* Font của chữ trên Puzzleboard: dùng font Myriad Pro Bold */
+    .cell-revealed span, #boardGrid span, .cell-square span {
+      font-family: 'Myriad Pro Bold', 'Segoe UI', sans-serif !important;
+    }
+
     :root {
       --blue: blue;
       --aqua: aqua;
@@ -115,10 +144,10 @@
   <div id="puzzleStageViewport" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
     <div id="puzzleStageContent" style="width: 1160px; height: 640px; flex-shrink: 0; transform-origin: center center; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative;">
 
-      <!-- Category Banner Display (Chủ đề ô chữ, bỏ bo góc) -->
-      <div id="categoryBanner" style="text-align: center; margin-bottom: 8px;">
+      <!-- Category Banner Display (Chủ đề ô chữ, giữ vị trí cố định) -->
+      <div id="categoryBanner" style="height: 70px; min-height: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 8px;">
         <div id="categoryBannerTag" style="display: inline-block; padding: 6px 36px; background: linear-gradient(to right, #f59e0b, #facc15, #f59e0b); color: #020617; font-weight: 900; font-size: 22px; border: 2px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.6);" class="rounded-none">
-          CHỦ ĐỀ: <span id="categoryTitle">DANH LAM THẮNG CẢNH</span>
+          <span id="categoryTitle">DANH LAM THẮNG CẢNH</span>
         </div>
         <div id="clueText" style="margin-top: 4px; font-size: 13px; color: #cbd5e1; font-weight: 700; font-style: italic;">
           <!-- Clue from controller if any -->
@@ -185,8 +214,48 @@
     </div>
   </div>
 
+  <!-- MISSING ROOM OVERLAY NOTIFICATION -->
+  <div id="missingRoomOverlay" class="hidden fixed inset-0 z-50 bg-slate-950/95 flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-slate-900 border-4 border-amber-500 rounded-2xl p-6 text-center space-y-4 shadow-2xl">
+      <div class="text-4xl">⚠️</div>
+      <h2 class="text-xl text-amber-400 font-black">THIẾU MÃ PHÒNG</h2>
+      <p class="text-base text-rose-300 font-black">
+        Vui lòng nhập tham số ?roomid=Mã phòng trên URL
+      </p>
+      <div class="pt-2 flex flex-col gap-2">
+        <input
+          type="text"
+          id="overlayRoomInput"
+          placeholder="Nhập mã phòng (6 số)..."
+          class="w-full px-4 py-2.5 bg-slate-950 border-2 border-slate-700 rounded-xl text-center text-white text-lg tracking-widest font-mono"
+        />
+        <button
+          onclick="submitRoomFromOverlay()"
+          class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl cursor-pointer"
+        >
+          Vào phòng
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const socket = io();
+
+    // Check roomid in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomid');
+
+    function submitRoomFromOverlay() {
+      const input = document.getElementById('overlayRoomInput').value.trim();
+      if (input) {
+        window.location.href = window.location.pathname + '?roomid=' + encodeURIComponent(input);
+      }
+    }
+
+    if (!roomId) {
+      document.getElementById('missingRoomOverlay').classList.remove('hidden');
+    }
 
     // STRICT SPECIFICATION: Ô CHỮ CÓ 4 HÀNG, MỖI HÀNG 16 Ô (4 x 16 = 64 Ô)
     const ROWS_COUNT = 4;
@@ -199,7 +268,9 @@
 
     // Socket Event: game:state
     socket.on('connect', () => {
-      socket.emit('state:request');
+      if (roomId) {
+        socket.emit('room:join', { roomId, role: 'puzzleboard' });
+      }
     });
 
     socket.on('game:state', (state) => {
@@ -208,12 +279,14 @@
     });
 
     // Tự động tải và đồng bộ ô chữ mới nhất ngay khi F5 / Reload / Vào muộn
-    fetch('/api/state')
-      .then(res => res.json())
-      .then(state => {
-        if (state) renderState(state);
-      })
-      .catch(() => {});
+    if (roomId) {
+      fetch('/api/state?roomid=' + encodeURIComponent(roomId))
+        .then(res => res.json())
+        .then(state => {
+          if (state) renderState(state);
+        })
+        .catch(() => {});
+    }
 
     function triggerConfettiCelebration() {
       if (typeof confetti === 'function') {
@@ -226,30 +299,23 @@
     }
 
     function renderState(state) {
-      // Category & Clue Visibility
+      const catBanner = document.getElementById('categoryBanner');
+
+      // Category & Clue Visibility (Giữ cố định kích thước container)
       const isCatVisible = state.puzzle.showCategory !== false;
       const isClueVisible = state.puzzle.showClue !== false;
 
-      const catBanner = document.getElementById('categoryBanner');
       const catTag = document.getElementById('categoryBannerTag');
       if (catTag) {
-        catTag.style.display = isCatVisible ? 'inline-block' : 'none';
+        catTag.style.visibility = isCatVisible ? 'visible' : 'hidden';
       }
       const catTitle = document.getElementById('categoryTitle');
       if (catTitle) catTitle.innerText = state.puzzle.category || 'CHỦ ĐỀ';
 
       const clueText = document.getElementById('clueText');
       if (clueText) {
-        clueText.style.display = isClueVisible ? 'block' : 'none';
+        clueText.style.visibility = isClueVisible ? 'visible' : 'hidden';
         clueText.innerText = state.puzzle.clue ? `"${state.puzzle.clue}"` : '';
-      }
-
-      if (catBanner) {
-        if (!isCatVisible && !isClueVisible) {
-          catBanner.style.display = 'none';
-        } else {
-          catBanner.style.display = 'block';
-        }
       }
 
       // Check Topic Selection Screen mode ("phải chọn chủ đề thì ô chữ mới hiện ra")
@@ -522,10 +588,11 @@
             const isMarked = !isRevealed && (markedIndices.includes(cell.index));
 
             if (isRevealed) {
-              // TRẠNG THÁI 4: Ô có chữ: Màu trắng (chữ màu đen, không có animation, Không hiện dấu thanh hỏi, sắc, huyền, ngã, nặng)
+              // Thanh dấu chỉ xuất hiện khi bấm nút Giải ô chữ (boardState === 'revealed'), còn lại là không xuất hiện
+              const charToShow = (boardState === 'revealed') ? cell.char : removeToneMarks(cell.char);
               cellEl.innerHTML = `
                 <div class="w-full h-full cell-revealed flex items-center justify-center">
-                  <span class="text-slate-950 font-black text-3xl font-mono leading-none">${removeToneMarks(cell.char)}</span>
+                  <span class="text-slate-950 font-black text-5xl sm:text-[52px] font-mono leading-none">${charToShow}</span>
                 </div>
               `;
             } else if (isMarked) {

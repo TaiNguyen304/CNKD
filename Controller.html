@@ -6,6 +6,7 @@
   <title>Bàn Điều Khiển - Chiếc Nón Kỳ Diệu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/sounds.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="/disableDevTools.js"></script>
   <style>
@@ -66,24 +67,24 @@
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen p-3 sm:p-5 pb-24">
+<body class="bg-slate-950 text-slate-100 h-screen max-h-screen overflow-hidden p-1.5 flex flex-col gap-1.5">
 
   <!-- In-app Toast Notification Container (Zero alerts) -->
-  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-md w-full"></div>
+  <div id="toastContainer" class="fixed top-2 right-2 z-50 flex flex-col gap-1.5 pointer-events-none max-w-sm w-full"></div>
 
   <!-- Custom Confirmation Modal (Zero confirms) -->
-  <div id="customConfirmModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border-2 border-rose-500/60 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center space-y-4">
-      <div class="w-14 h-14 rounded-full bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center text-2xl font-black">
+  <div id="customConfirmModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3">
+    <div class="bg-slate-900 border-2 border-rose-500/60 rounded-xl max-w-md w-full p-4 shadow-2xl text-center space-y-3">
+      <div class="w-10 h-10 rounded-full bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center text-xl font-black">
         !
       </div>
-      <h3 class="text-lg font-black text-white" id="confirmModalTitle">XÁC NHẬN HÀNH ĐỘNG</h3>
+      <h3 class="text-base font-black text-white" id="confirmModalTitle">XÁC NHẬN HÀNH ĐỘNG</h3>
       <p class="text-xs text-slate-300" id="confirmModalMessage">Bạn có chắc chắn muốn thực hiện hành động này?</p>
-      <div class="flex gap-3 justify-center pt-2">
-        <button onclick="closeConfirmModal(false)" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700">
+      <div class="flex gap-2 justify-center pt-1">
+        <button onclick="closeConfirmModal(false)" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700">
           Hủy bỏ
         </button>
-        <button id="confirmModalOkBtn" class="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-lg shadow-rose-900/30">
+        <button id="confirmModalOkBtn" class="px-5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-lg shadow-rose-900/30">
           Đồng ý
         </button>
       </div>
@@ -91,60 +92,60 @@
   </div>
 
   <!-- POPUP VÒNG 1-4 & VÒNG ĐẶC BIỆT: Ô chữ cố định hay chọn 1 trong 3 chủ đề -->
-  <div id="roundSelectionModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border-2 border-amber-500/70 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-slate-950 text-2xl shadow-lg">
+  <div id="roundSelectionModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-3">
+    <div class="bg-slate-900 border-2 border-amber-500/70 rounded-2xl max-w-xl w-full p-4 sm:p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-slate-950 text-lg shadow-lg">
             ⭐
           </div>
           <div>
-            <h2 class="text-xl sm:text-2xl font-black text-white" id="modalRoundName">BẮT ĐẦU VÒNG CHƠI</h2>
-            <p class="text-xs text-amber-300/80">Lựa chọn phương thức mở ô chữ trên sân khấu</p>
+            <h2 class="text-base sm:text-lg font-black text-white" id="modalRoundName">BẮT ĐẦU VÒNG CHƠI</h2>
+            <p class="text-[11px] text-amber-300/80">Lựa chọn phương thức mở ô chữ trên sân khấu</p>
           </div>
         </div>
-        <button onclick="closeRoundSelectionModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold">
+        <button onclick="closeRoundSelectionModal()" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs">
           X
         </button>
       </div>
 
       <!-- State 1: 2 Main Buttons (Ô chữ cố định VS Chọn 1 trong 3 chủ đề) -->
-      <div id="modalStep1Options" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div id="modalStep1Options" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <!-- Nút 1: Ô chữ cố định -->
-        <button onclick="handleSelectFixedPuzzle()" class="p-5 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-blue-500/50 hover:border-blue-400 hover:bg-slate-800 text-left transition-all duration-200 group shadow-lg flex flex-col justify-between">
+        <button onclick="handleSelectFixedPuzzle()" class="p-3.5 rounded-xl bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-blue-500/50 hover:border-blue-400 hover:bg-slate-800 text-left transition-all duration-200 group shadow-lg flex flex-col justify-between">
           <div>
-            <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-base font-black mb-3 group-hover:scale-110 transition">
+            <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-black mb-2 group-hover:scale-110 transition">
               1
             </div>
-            <h3 class="text-base font-black text-white group-hover:text-blue-300">Ô CHỮ CỐ ĐỊNH</h3>
-            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+            <h3 class="text-sm font-black text-white group-hover:text-blue-300">Ô CHỮ CỐ ĐỊNH</h3>
+            <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
               Mở trực tiếp ô chữ cố định của vòng này. Ô chữ trống sẽ lập tức hiện ra trên Puzzleboard.
             </p>
           </div>
-          <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-blue-400 flex items-center gap-1.5">
+          <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] font-bold text-blue-400 flex items-center gap-1">
             <span>Chọn Ô Chữ Cố Định</span>
           </div>
         </button>
 
         <!-- Nút 2: Chọn 1 trong 3 chủ đề -->
-        <button onclick="handleStartTopicSelectionStep()" class="p-5 rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-amber-500/50 hover:border-amber-400 hover:bg-slate-800 text-left transition-all duration-200 group shadow-lg flex flex-col justify-between">
+        <button onclick="handleStartTopicSelectionStep()" class="p-3.5 rounded-xl bg-gradient-to-b from-slate-800 to-slate-900 border-2 border-amber-500/50 hover:border-amber-400 hover:bg-slate-800 text-left transition-all duration-200 group shadow-lg flex flex-col justify-between">
           <div>
-            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-base font-black mb-3 group-hover:scale-110 transition">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-black mb-2 group-hover:scale-110 transition">
               3
             </div>
-            <h3 class="text-base font-black text-white group-hover:text-amber-300">CHỌN 1 TRONG 3 CHỦ ĐỀ</h3>
-            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+            <h3 class="text-sm font-black text-white group-hover:text-amber-300">CHỌN 1 TRONG 3 CHỦ ĐỀ</h3>
+            <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
               Xuất hiện 3 chủ đề cho người chơi chọn. Sau khi người chơi chọn xong, ô chữ mới hiện ra.
             </p>
           </div>
-          <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-amber-400 flex items-center gap-1.5">
+          <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] font-bold text-amber-400 flex items-center gap-1">
             <span>Chọn 1 trong 3 chủ đề</span>
           </div>
         </button>
       </div>
 
       <!-- State 2: Display 3 Topics to Choose (Ô chữ chỉ hiện ra sau khi chọn chủ đề) -->
-      <div id="modalStep2Topics" class="hidden space-y-4">
+      <div id="modalStep2Topics" class="hidden space-y-3">
         <div class="flex items-center justify-between">
           <span class="text-xs text-amber-300 uppercase tracking-wider font-extrabold">
             BẤM CHỌN 1 TRONG 3 CHỦ ĐỀ ĐỂ MỞ Ô CHỮ:
@@ -154,11 +155,11 @@
           </button>
         </div>
 
-        <div id="topicsContainer" class="space-y-3">
+        <div id="topicsContainer" class="space-y-2">
           <!-- Dynamically populated 3 topics -->
         </div>
 
-        <p class="text-[11px] text-slate-400 text-center italic">
+        <p class="text-[10px] text-slate-400 text-center italic">
           * Theo quy tắc: Khi bấm chọn một trong ba chủ đề trên, ô chữ trống của chủ đề đó mới chính thức xuất hiện trên sân khấu.
         </p>
       </div>
@@ -166,545 +167,828 @@
   </div>
 
   <!-- Header -->
-  <header class="max-w-7xl mx-auto mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
-    <div class="flex items-center gap-3">
+  <header class="max-w-[1536px] mx-auto mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+    <div class="flex items-center gap-2">
       <div>
-        <h1 class="text-xl md:text-2xl font-black text-white tracking-wide flex items-center gap-2">
-          CONTROLLER <span class="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">BÀN ĐIỀU KHIỂN TRUNG TÂM</span>
+        <h1 class="text-base sm:text-lg font-black text-white tracking-wide flex items-center gap-1.5">
+          CONTROLLER <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">BÀN ĐIỀU KHIỂN TRUNG TÂM</span>
         </h1>
-        <p class="text-xs text-slate-400">Chiếc Nón Kỳ Diệu - 7 Màn hình thời gian thực</p>
+        <p class="text-[10px] text-slate-400">Chiếc Nón Kỳ Diệu - 7 Màn hình thời gian thực</p>
       </div>
     </div>
 
     <!-- Quick Links & Status -->
-    <div class="flex items-center gap-2 flex-wrap">
-      <div id="connectionStatus" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <div id="roomHeaderBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/40 text-amber-300 text-[11px] font-bold">
+        <span>Phòng:</span>
+        <span id="headerRoomIdDisplay" class="font-mono text-xs text-white">------</span>
+      </div>
+
+      <div id="connectionStatus" class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
         <span>Đã kết nối</span>
       </div>
 
-      <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-lg text-xs">
-        <a href="/Host.html" target="_blank" class="px-2.5 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition">Host</a>
-        <a href="/Puzzleboard.html" target="_blank" class="px-2.5 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition">Ô Chữ</a>
-        <a href="/Wheel.html" target="_blank" class="px-2.5 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition">Nón</a>
-        <a href="/Player1.html" target="_blank" class="px-2 py-1 rounded hover:bg-red-500/20 text-red-300">P1</a>
-        <a href="/Player2.html" target="_blank" class="px-2 py-1 rounded hover:bg-emerald-500/20 text-emerald-300">P2</a>
-        <a href="/Player3.html" target="_blank" class="px-2 py-1 rounded hover:bg-blue-500/20 text-blue-300">P3</a>
+      <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 p-0.5 rounded-lg text-[11px]">
+        <a id="navHostLink" href="/Host.html" target="_blank" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition">Host</a>
+        <a id="navPuzzleboardLink" href="/Puzzleboard.html" target="_blank" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition">Ô Chữ</a>
+        <a id="navWheelLink" href="/Wheel.html" target="_blank" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition">Nón</a>
+        <a id="navP1Link" href="/Player1.html" target="_blank" class="px-1.5 py-0.5 rounded hover:bg-red-500/20 text-red-300">P1</a>
+        <a id="navP2Link" href="/Player2.html" target="_blank" class="px-1.5 py-0.5 rounded hover:bg-emerald-500/20 text-emerald-300">P2</a>
+        <a id="navP3Link" href="/Player3.html" target="_blank" class="px-1.5 py-0.5 rounded hover:bg-blue-500/20 text-blue-300">P3</a>
       </div>
 
-      <button onclick="toggleSound()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs">
+      <button onclick="toggleSound()" class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-[11px]">
         Âm thanh
       </button>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto space-y-5">
+  <main class="max-w-[1536px] mx-auto space-y-1.5 flex-1 flex flex-col min-h-0 w-full overflow-hidden">
 
-    <!-- PHẦN 1: QUẢN LÝ 3 HÀNG NGƯỜI CHƠI THEO ĐÚNG YÊU CẦU -->
-    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
-      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
-        <h2 class="text-sm sm:text-base font-bold text-slate-200 flex items-center gap-2">
-          BẢNG ĐIỀU KHIỂN ĐIỂM SỐ 3 NGƯỜI CHƠI (3 HÀNG)
+    <!-- PHẦN 1: QUẢN LÝ 3 HÀNG NGƯỜI CHƠI (SIÊU GỌN GÀNG TẬP TRUNG TRONG 1 KHUNG HÌNH) -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 sm:p-2 shadow-md shrink-0">
+      <div class="flex items-center justify-between mb-1 pb-0.5 border-b border-slate-800">
+        <h2 class="text-[11px] sm:text-xs font-bold text-slate-200 flex items-center gap-1.5">
+          <span>BẢNG ĐIỀU KHIỂN ĐIỂM SỐ 3 NGƯỜI CHƠI</span>
         </h2>
-        <span class="text-xs text-slate-400">Mỗi hàng: Tên, Điểm vòng, Set, +, -, Reset vòng, x2, /2, Điểm tổng, Set điểm tổng, Thêm vào điểm tổng</span>
+        <span class="text-[10px] text-slate-400 hidden md:inline">Tên | Điểm vòng (+, -, Reset, x2, /2) | Điểm tổng (Set tổng, Thêm tổng)</span>
       </div>
 
-      <div class="space-y-3.5">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-1.5">
         <!-- Hàng 1: Player 1 (Màu đỏ) -->
-        <div id="playerRow1" class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-red-500/30 shadow-sm flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
-          <div class="flex items-center justify-between xl:w-52 shrink-0 border-b xl:border-b-0 xl:border-r border-slate-800 pb-2 xl:pb-0 xl:pr-3">
-            <div class="flex items-center gap-2">
-              <span class="w-3.5 h-3.5 rounded-full bg-red-500"></span>
-              <span class="font-bold text-red-400 text-sm" id="p1_badgeName">Người chơi 1</span>
-            </div>
-            <div class="text-right">
-              <div class="text-xs text-slate-400">Vòng: <span class="font-black text-amber-300 text-base" id="p1_dispRound">0</span></div>
-              <div class="text-[11px] text-slate-500">Tổng: <span class="font-bold text-white" id="p1_dispTotal">0</span></div>
-            </div>
+        <div id="playerRow1" class="p-1 px-1.5 rounded bg-slate-950/80 border border-red-500/30 flex items-center justify-between gap-1 flex-wrap sm:flex-nowrap">
+          <div class="flex items-center gap-1 shrink-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span>
+            <span class="font-bold text-red-400 text-[11px] truncate w-16" id="p1_badgeName">Player 1</span>
+            <div class="text-[10px] text-slate-400">V: <span class="font-black text-amber-300 text-xs" id="p1_dispRound">0</span></div>
+            <div class="text-[10px] text-slate-500">T: <span class="font-bold text-white text-[11px]" id="p1_dispTotal">0</span></div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2 flex-grow">
-            <!-- 1 textbox nhập tên -->
-            <input type="text" id="p1_nameInput" placeholder="Tên P1" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
-            <!-- 1 textbox nhập điểm -->
-            <input type="number" id="p1_scoreInput" placeholder="Điểm vòng" class="w-24 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-amber-300 font-mono focus:outline-none">
-            <!-- 1 nút Set để set tên và điểm vòng -->
-            <button onclick="setPlayer(1)" class="btn-action px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-semibold shadow">Set</button>
-            <!-- 1 nút + để cộng số điểm đã nhập vào điểm vòng -->
-            <button onclick="addRoundScore(1)" class="btn-action px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold shadow" title="Cộng vào điểm vòng">+</button>
-            <!-- 1 nút - để trừ khỏi điểm vòng -->
-            <button onclick="subtractRoundScore(1)" class="btn-action px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded-lg text-xs font-bold shadow" title="Trừ khỏi điểm vòng">-</button>
-            <!-- Reset vòng để reset điểm vòng về 0 -->
-            <button onclick="resetRoundScore(1)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs border border-slate-700">Reset vòng</button>
-            <!-- 1 nút x2 để nhân đôi điểm vòng -->
-            <button onclick="multiplyRoundScore(1, 2)" class="btn-action px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold">x2</button>
-            <!-- /2 để chia đôi điểm vòng -->
-            <button onclick="multiplyRoundScore(1, 0.5)" class="btn-action px-2.5 py-1.5 bg-amber-800 hover:bg-amber-700 text-amber-200 rounded-lg text-xs font-bold">/2</button>
-            <!-- 1 textbox để nhập điểm tổng -->
-            <input type="number" id="p1_totalInput" placeholder="Điểm tổng" class="w-28 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-emerald-300 font-mono focus:outline-none">
-            <!-- 1 nút set điểm tổng để set điểm tổng theo số đã nhập -->
-            <button onclick="setTotalScore(1)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs">Set điểm tổng</button>
-            <!-- 1 nút thêm vào điểm tổng để thêm điểm vòng vào tổng -->
-            <button onclick="addRoundToTotal(1)" class="btn-action px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow">Thêm vào điểm tổng</button>
+          <div class="flex items-center gap-1 flex-wrap">
+            <input type="text" id="p1_nameInput" placeholder="Tên P1" class="w-16 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-white focus:outline-none">
+            <input type="text" inputmode="numeric" id="p1_scoreInput" oninput="formatScoreInput(this)" placeholder="Điểm vòng" class="w-16 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-amber-300 font-mono focus:outline-none">
+            <button onclick="setPlayer(1)" class="btn-action h-6 px-1.5 bg-red-600 hover:bg-red-500 text-white rounded text-[10px] font-bold shadow">Set</button>
+            <button onclick="addRoundScore(1)" class="btn-action h-6 px-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-[10px] font-bold" title="Cộng">+</button>
+            <button onclick="subtractRoundScore(1)" class="btn-action h-6 px-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded text-[10px] font-bold" title="Trừ">-</button>
+            <button onclick="resetRoundScore(1)" class="btn-action h-6 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] border border-slate-700">0</button>
+            <button onclick="multiplyRoundScore(1, 2)" class="btn-action h-6 px-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-[10px] font-bold">x2</button>
+            <button onclick="multiplyRoundScore(1, 0.5)" class="btn-action h-6 px-1 bg-amber-800 hover:bg-amber-700 text-amber-200 rounded text-[10px] font-bold">/2</button>
+            <input type="text" inputmode="numeric" id="p1_totalInput" oninput="formatScoreInput(this)" placeholder="Điểm tổng" class="w-16 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-emerald-300 font-mono focus:outline-none">
+            <button onclick="setTotalScore(1)" class="btn-action h-6 px-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded text-[10px]">Set T</button>
+            <button onclick="addRoundToTotal(1)" class="btn-action h-6 px-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold shadow">+Tổng</button>
           </div>
         </div>
 
         <!-- Hàng 2: Player 2 (Màu xanh lục) -->
-        <div id="playerRow2" class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-emerald-500/30 shadow-sm flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
-          <div class="flex items-center justify-between xl:w-52 shrink-0 border-b xl:border-b-0 xl:border-r border-slate-800 pb-2 xl:pb-0 xl:pr-3">
-            <div class="flex items-center gap-2">
-              <span class="w-3.5 h-3.5 rounded-full bg-emerald-500"></span>
-              <span class="font-bold text-emerald-400 text-sm" id="p2_badgeName">Người chơi 2</span>
-            </div>
-            <div class="text-right">
-              <div class="text-xs text-slate-400">Vòng: <span class="font-black text-amber-300 text-base" id="p2_dispRound">0</span></div>
-              <div class="text-[11px] text-slate-500">Tổng: <span class="font-bold text-white" id="p2_dispTotal">0</span></div>
-            </div>
+        <div id="playerRow2" class="p-1 px-1.5 rounded bg-slate-950/80 border border-emerald-500/30 flex items-center justify-between gap-1 flex-wrap sm:flex-nowrap">
+          <div class="flex items-center gap-1 shrink-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+            <span class="font-bold text-emerald-400 text-[11px] truncate w-16" id="p2_badgeName">Player 2</span>
+            <div class="text-[10px] text-slate-400">V: <span class="font-black text-amber-300 text-xs" id="p2_dispRound">0</span></div>
+            <div class="text-[10px] text-slate-500">T: <span class="font-bold text-white text-[11px]" id="p2_dispTotal">0</span></div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2 flex-grow">
-            <input type="text" id="p2_nameInput" placeholder="Tên P2" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
-            <input type="number" id="p2_scoreInput" placeholder="Điểm vòng" class="w-24 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-amber-300 font-mono focus:outline-none">
-            <button onclick="setPlayer(2)" class="btn-action px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow">Set</button>
-            <button onclick="addRoundScore(2)" class="btn-action px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold shadow" title="Cộng vào điểm vòng">+</button>
-            <button onclick="subtractRoundScore(2)" class="btn-action px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded-lg text-xs font-bold shadow" title="Trừ khỏi điểm vòng">-</button>
-            <button onclick="resetRoundScore(2)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs border border-slate-700">Reset vòng</button>
-            <button onclick="multiplyRoundScore(2, 2)" class="btn-action px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold">x2</button>
-            <button onclick="multiplyRoundScore(2, 0.5)" class="btn-action px-2.5 py-1.5 bg-amber-800 hover:bg-amber-700 text-amber-200 rounded-lg text-xs font-bold">/2</button>
-            <input type="number" id="p2_totalInput" placeholder="Điểm tổng" class="w-28 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-emerald-300 font-mono focus:outline-none">
-            <button onclick="setTotalScore(2)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs">Set điểm tổng</button>
-            <button onclick="addRoundToTotal(2)" class="btn-action px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow">Thêm vào điểm tổng</button>
+          <div class="flex items-center gap-1 flex-wrap">
+            <input type="text" id="p2_nameInput" placeholder="Tên P2" class="w-16 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-white focus:outline-none">
+            <input type="text" inputmode="numeric" id="p2_scoreInput" oninput="formatScoreInput(this)" placeholder="Điểm vòng" class="w-16 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-amber-300 font-mono focus:outline-none">
+            <button onclick="setPlayer(2)" class="btn-action h-6 px-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold shadow">Set</button>
+            <button onclick="addRoundScore(2)" class="btn-action h-6 px-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-[10px] font-bold" title="Cộng">+</button>
+            <button onclick="subtractRoundScore(2)" class="btn-action h-6 px-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded text-[10px] font-bold" title="Trừ">-</button>
+            <button onclick="resetRoundScore(2)" class="btn-action h-6 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] border border-slate-700">0</button>
+            <button onclick="multiplyRoundScore(2, 2)" class="btn-action h-6 px-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-[10px] font-bold">x2</button>
+            <button onclick="multiplyRoundScore(2, 0.5)" class="btn-action h-6 px-1 bg-amber-800 hover:bg-amber-700 text-amber-200 rounded text-[10px] font-bold">/2</button>
+            <input type="text" inputmode="numeric" id="p2_totalInput" oninput="formatScoreInput(this)" placeholder="Điểm tổng" class="w-16 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-emerald-300 font-mono focus:outline-none">
+            <button onclick="setTotalScore(2)" class="btn-action h-6 px-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded text-[10px]">Set T</button>
+            <button onclick="addRoundToTotal(2)" class="btn-action h-6 px-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold shadow">+Tổng</button>
           </div>
         </div>
 
         <!-- Hàng 3: Player 3 (Màu xanh dương) -->
-        <div id="playerRow3" class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-blue-500/30 shadow-sm flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
-          <div class="flex items-center justify-between xl:w-52 shrink-0 border-b xl:border-b-0 xl:border-r border-slate-800 pb-2 xl:pb-0 xl:pr-3">
-            <div class="flex items-center gap-2">
-              <span class="w-3.5 h-3.5 rounded-full bg-blue-500"></span>
-              <span class="font-bold text-blue-400 text-sm" id="p3_badgeName">Người chơi 3</span>
-            </div>
-            <div class="text-right">
-              <div class="text-xs text-slate-400">Vòng: <span class="font-black text-amber-300 text-base" id="p3_dispRound">0</span></div>
-              <div class="text-[11px] text-slate-500">Tổng: <span class="font-bold text-white" id="p3_dispTotal">0</span></div>
-            </div>
+        <div id="playerRow3" class="p-1 px-1.5 rounded bg-slate-950/80 border border-blue-500/30 flex items-center justify-between gap-1 flex-wrap sm:flex-nowrap">
+          <div class="flex items-center gap-1 shrink-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+            <span class="font-bold text-blue-400 text-[11px] truncate w-16" id="p3_badgeName">Player 3</span>
+            <div class="text-[10px] text-slate-400">V: <span class="font-black text-amber-300 text-xs" id="p3_dispRound">0</span></div>
+            <div class="text-[10px] text-slate-500">T: <span class="font-bold text-white text-[11px]" id="p3_dispTotal">0</span></div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2 flex-grow">
-            <input type="text" id="p3_nameInput" placeholder="Tên P3" class="w-28 sm:w-32 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none">
-            <input type="number" id="p3_scoreInput" placeholder="Điểm vòng" class="w-24 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-amber-300 font-mono focus:outline-none">
-            <button onclick="setPlayer(3)" class="btn-action px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow">Set</button>
-            <button onclick="addRoundScore(3)" class="btn-action px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold shadow" title="Cộng vào điểm vòng">+</button>
-            <button onclick="subtractRoundScore(3)" class="btn-action px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded-lg text-xs font-bold shadow" title="Trừ khỏi điểm vòng">-</button>
-            <button onclick="resetRoundScore(3)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs border border-slate-700">Reset vòng</button>
-            <button onclick="multiplyRoundScore(3, 2)" class="btn-action px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold">x2</button>
-            <button onclick="multiplyRoundScore(3, 0.5)" class="btn-action px-2.5 py-1.5 bg-amber-800 hover:bg-amber-700 text-amber-200 rounded-lg text-xs font-bold">/2</button>
-            <input type="number" id="p3_totalInput" placeholder="Điểm tổng" class="w-28 px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-emerald-300 font-mono focus:outline-none">
-            <button onclick="setTotalScore(3)" class="btn-action px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs">Set điểm tổng</button>
-            <button onclick="addRoundToTotal(3)" class="btn-action px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow">Thêm vào điểm tổng</button>
+          <div class="flex items-center gap-1 flex-wrap">
+            <input type="text" id="p3_nameInput" placeholder="Tên P3" class="w-16 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-white focus:outline-none">
+            <input type="text" inputmode="numeric" id="p3_scoreInput" oninput="formatScoreInput(this)" placeholder="Điểm vòng" class="w-16 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-amber-300 font-mono focus:outline-none">
+            <button onclick="setPlayer(3)" class="btn-action h-6 px-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold shadow">Set</button>
+            <button onclick="addRoundScore(3)" class="btn-action h-6 px-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-[10px] font-bold" title="Cộng">+</button>
+            <button onclick="subtractRoundScore(3)" class="btn-action h-6 px-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded text-[10px] font-bold" title="Trừ">-</button>
+            <button onclick="resetRoundScore(3)" class="btn-action h-6 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] border border-slate-700">0</button>
+            <button onclick="multiplyRoundScore(3, 2)" class="btn-action h-6 px-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-[10px] font-bold">x2</button>
+            <button onclick="multiplyRoundScore(3, 0.5)" class="btn-action h-6 px-1 bg-amber-800 hover:bg-amber-700 text-amber-200 rounded text-[10px] font-bold">/2</button>
+            <input type="text" inputmode="numeric" id="p3_totalInput" oninput="formatScoreInput(this)" placeholder="Điểm tổng" class="w-16 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-[11px] text-emerald-300 font-mono focus:outline-none">
+            <button onclick="setTotalScore(3)" class="btn-action h-6 px-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded text-[10px]">Set T</button>
+            <button onclick="addRoundToTotal(3)" class="btn-action h-6 px-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold shadow">+Tổng</button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- PHẦN 2: NHẬP ĐỀ TỪ FILE EXCEL (TƯƠNG THÍCH PUZZLE.XLSX) -->
-    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
-      <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-2 border-b border-slate-800">
-        <div class="flex items-center gap-2">
-          <h2 class="text-sm sm:text-base font-bold text-slate-200">NHẬP ĐỀ TỪ FILE EXCEL (PUZZLE.XLSX)</h2>
-        </div>
-        <div class="flex items-center gap-2">
-          <!-- 1 nút nhập đề để nhập đề từ file Excel -->
-          <label for="excelFileInput" class="btn-action cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-900/20">
-            <span>Nhập đề từ Excel</span>
-          </label>
-          <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleExcelImport(event)">
-        </div>
-      </div>
+    <!-- THANH TAB CHUYỂN MÀN HÌNH ĐIỀU KHIỂN -->
+    <div class="flex items-center gap-1 border-b border-slate-800 pb-0.5 shrink-0 overflow-x-auto">
+      <button id="btn_tab_tabRoom" onclick="switchTab('tabRoom')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
+        <span>🏠 MÃ PHÒNG & MẬT KHẨU</span>
+      </button>
+      <button id="btn_tab_tabPuzzle" onclick="switchTab('tabPuzzle')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-amber-500 text-slate-950 border border-amber-400 shadow transition flex items-center gap-1 whitespace-nowrap">
+        <span>🧩 ĐIỀU KHIỂN Ô CHỮ & ĐỀ THI</span>
+      </button>
+      <button id="btn_tab_tabWheel" onclick="switchTab('tabWheel')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
+        <span>🎡 VÒNG CHƠI & NÓN</span>
+      </button>
+      <button id="btn_tab_tabSound" onclick="switchTab('tabSound')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
+        <span>🎵 SOUNDBOARD (32+ NHẠC)</span>
+      </button>
+      <button id="btn_tab_tabBuzzer" onclick="switchTab('tabBuzzer')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
+        <span>🔔 CHUÔNG & HỆ THỐNG</span>
+      </button>
+    </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <!-- Ô chữ hiện tại trên sóng -->
-        <div class="lg:col-span-2 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
-          <div class="flex items-center justify-between mb-2.5">
-            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ô chữ đang phát sóng</h3>
-            <span id="currentRoundBadgeInCard" class="text-xs text-amber-400 px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+    <!-- KHUNG CHỨA TAB NỘI DUNG TỰ CO GIÃN THEO MÀN HÌNH -->
+    <div class="flex-1 min-h-0 overflow-y-auto pr-0.5 space-y-1.5">
+      
+      <!-- TAB 0: QUẢN LÝ MÃ PHÒNG & MẬT KHẨU (6 CHỮ SỐ & 3 MẬT KHẨU 4 CHỮ SỐ) -->
+      <div id="tabRoom" class="tab-content hidden space-y-2">
+        <section class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 sm:p-4 shadow-xl space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
             <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Chủ đề (Category)</label>
-              <input type="text" id="puzzleCategoryInput" placeholder="DANH LAM THẮNG CẢNH" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-amber-300 font-bold focus:outline-none">
+              <h2 class="text-sm sm:text-base font-black text-amber-400 flex items-center gap-2">
+                <span>🏠 QUẢN LÝ MÃ PHÒNG & MẬT KHẨU NGƯỜI CHƠI</span>
+              </h2>
+              <p class="text-xs text-slate-400">Tạo mã phòng 6 chữ số và 3 mật khẩu 4 chữ số bảo mật cho từng vị trí người chơi</p>
             </div>
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Gợi ý của MC (Clue)</label>
-              <input type="text" id="puzzleClueInput" placeholder="Gợi ý câu hỏi..." class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none">
-            </div>
-          </div>
-          <div class="flex gap-2">
-            <div class="flex-grow">
-              <label class="block text-[11px] text-slate-400 mb-1">Đáp án ô chữ (Answer)</label>
-              <input type="text" id="puzzleAnswerInput" placeholder="VỊNH HẠ LONG" class="w-full px-3 py-2 bg-slate-900 border border-indigo-500/50 rounded-lg text-sm text-white font-black tracking-wider uppercase focus:outline-none">
-            </div>
-            <div class="flex items-end">
-              <button onclick="applyManualPuzzle()" class="btn-action px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow h-[38px] whitespace-nowrap">
-                Áp dụng
+            <div class="flex items-center gap-2">
+              <button onclick="generateNewRoom()" class="btn-action px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs rounded-lg shadow-lg flex items-center gap-1.5 cursor-pointer">
+                <span>✨ TẠO PHÒNG MỚI</span>
               </button>
             </div>
           </div>
-        </div>
 
-        <!-- Thông tin đề thi theo các sheet đã nạp -->
-        <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
-          <div>
-            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Trạng thái đề thi đã nạp</h3>
-            <div id="importedRoundsList" class="space-y-1.5 max-h-32 overflow-y-auto text-xs text-slate-300 pr-1">
-              <!-- Loaded sheet summaries -->
+          <!-- Room ID Banner -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
+            <!-- Left: Big Room ID Card -->
+            <div class="md:col-span-4 p-3.5 bg-slate-950/80 border-2 border-amber-500/60 rounded-xl flex flex-col justify-between items-center text-center">
+              <div class="text-[11px] uppercase tracking-wider text-amber-400 font-extrabold mb-1">MÃ PHÒNG HIỆN TẠI</div>
+              <div id="roomDisplayId" class="text-3xl sm:text-4xl font-mono font-black text-white tracking-widest my-1">
+                ------
+              </div>
+              <div class="flex gap-2 w-full mt-2">
+                <button onclick="copyRoomId()" class="btn-action flex-1 py-1 px-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-xs font-bold">
+                  Sao chép Mã
+                </button>
+                <button onclick="copyInviteSummary()" class="btn-action flex-1 py-1 px-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded text-xs font-bold">
+                  Sao chép Tất cả
+                </button>
+              </div>
+            </div>
+
+            <!-- Right: 3 Passwords for 3 Players -->
+            <div class="md:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <!-- Player 1 Password Card -->
+              <div class="p-3 bg-slate-950/80 border-2 border-red-500/40 rounded-xl flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs font-black text-red-400 flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-red-500"></span> P1 (Đỏ)
+                  </span>
+                  <span class="text-[10px] text-slate-400">Slot 1</span>
+                </div>
+                <div class="my-1.5 text-center">
+                  <div class="text-[10px] text-slate-500">MẬT KHẨU (4 SỐ)</div>
+                  <div id="roomP1Pass" class="text-2xl font-mono font-black text-amber-300 tracking-wider">----</div>
+                </div>
+                <div class="flex flex-col gap-1 mt-1 pt-1.5 border-t border-slate-800">
+                  <button onclick="copyPlayerLink(1)" class="btn-action w-full py-1 bg-red-950/60 hover:bg-red-900/80 text-red-200 border border-red-800/60 rounded text-[11px] font-bold">
+                    Copy Link P1
+                  </button>
+                  <a id="btnOpenP1" href="/Player1.html" target="_blank" class="w-full text-center py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px]">
+                    Mở tab P1 ↗
+                  </a>
+                </div>
+              </div>
+
+              <!-- Player 2 Password Card -->
+              <div class="p-3 bg-slate-950/80 border-2 border-emerald-500/40 rounded-xl flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs font-black text-emerald-400 flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> P2 (Vàng)
+                  </span>
+                  <span class="text-[10px] text-slate-400">Slot 2</span>
+                </div>
+                <div class="my-1.5 text-center">
+                  <div class="text-[10px] text-slate-500">MẬT KHẨU (4 SỐ)</div>
+                  <div id="roomP2Pass" class="text-2xl font-mono font-black text-amber-300 tracking-wider">----</div>
+                </div>
+                <div class="flex flex-col gap-1 mt-1 pt-1.5 border-t border-slate-800">
+                  <button onclick="copyPlayerLink(2)" class="btn-action w-full py-1 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-200 border border-emerald-800/60 rounded text-[11px] font-bold">
+                    Copy Link P2
+                  </button>
+                  <a id="btnOpenP2" href="/Player2.html" target="_blank" class="w-full text-center py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px]">
+                    Mở tab P2 ↗
+                  </a>
+                </div>
+              </div>
+
+              <!-- Player 3 Password Card -->
+              <div class="p-3 bg-slate-950/80 border-2 border-blue-500/40 rounded-xl flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xs font-black text-blue-400 flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span> P3 (Xanh)
+                  </span>
+                  <span class="text-[10px] text-slate-400">Slot 3</span>
+                </div>
+                <div class="my-1.5 text-center">
+                  <div class="text-[10px] text-slate-500">MẬT KHẨU (4 SỐ)</div>
+                  <div id="roomP3Pass" class="text-2xl font-mono font-black text-amber-300 tracking-wider">----</div>
+                </div>
+                <div class="flex flex-col gap-1 mt-1 pt-1.5 border-t border-slate-800">
+                  <button onclick="copyPlayerLink(3)" class="btn-action w-full py-1 bg-blue-950/60 hover:bg-blue-900/80 text-blue-200 border border-blue-800/60 rounded text-[11px] font-bold">
+                    Copy Link P3
+                  </button>
+                  <a id="btnOpenP3" href="/Player3.html" target="_blank" class="w-full text-center py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px]">
+                    Mở tab P3 ↗
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-            <span>Tổng số vòng: <strong class="text-white" id="totalRoundsCount">0</strong></span>
-            <span class="text-emerald-400">Đã đồng bộ</span>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- PHẦN 3: VÒNG CHƠI (CÁC NÚT VÒNG CHƠI) -->
-    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
-      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
-        <div class="flex items-center gap-2">
-          <h2 class="text-sm sm:text-base font-bold text-slate-200">MỤC VÒNG CHƠI</h2>
-        </div>
-        <div class="text-xs">
-          Vòng hiện tại: <span id="currentRoundDisplay" class="font-extrabold text-amber-400 text-sm px-2.5 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
-        </div>
-      </div>
-
-      <!-- Các nút vòng chơi: Đoán nhanh 1, Đoán nhanh 2, Vòng 1, Vòng 2, Vòng 3, Đoán nhanh 3, ĐNLH 1, ĐNLH 2, ĐNLH 3, Vòng 4, Vòng khán giả, Vòng đặc biệt -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-        <button onclick="triggerRoundClick('Đoán nhanh 1')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          Đoán nhanh 1
-        </button>
-        <button onclick="triggerRoundClick('Đoán nhanh 2')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          Đoán nhanh 2
-        </button>
-        <!-- Vòng 1 (Có popup 2 nút) -->
-        <button onclick="triggerRoundClick('Vòng 1')" class="round-btn btn-action py-2.5 px-3 bg-indigo-600 border border-indigo-400 text-white rounded-xl text-xs font-bold text-center relative group">
-          <span>Vòng 1</span>
-          <span class="text-[10px] block opacity-75 font-normal">Popup lựa chọn</span>
-        </button>
-        <!-- Vòng 2 (Có popup 2 nút) -->
-        <button onclick="triggerRoundClick('Vòng 2')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          <span>Vòng 2</span>
-          <span class="text-[10px] block opacity-75 font-normal">Popup lựa chọn</span>
-        </button>
-        <!-- Vòng 3 (Có popup 2 nút) -->
-        <button onclick="triggerRoundClick('Vòng 3')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          <span>Vòng 3</span>
-          <span class="text-[10px] block opacity-75 font-normal">Popup lựa chọn</span>
-        </button>
-        <button onclick="triggerRoundClick('Đoán nhanh 3')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          Đoán nhanh 3
-        </button>
-        <button onclick="triggerRoundClick('ĐNLH 1')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          ĐNLH 1
-        </button>
-        <button onclick="triggerRoundClick('ĐNLH 2')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          ĐNLH 2
-        </button>
-        <button onclick="triggerRoundClick('ĐNLH 3')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          ĐNLH 3
-        </button>
-        <!-- Vòng 4 (Có popup 2 nút) -->
-        <button onclick="triggerRoundClick('Vòng 4')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          <span>Vòng 4</span>
-          <span class="text-[10px] block opacity-75 font-normal">Popup lựa chọn</span>
-        </button>
-        <button onclick="triggerRoundClick('Vòng khán giả')" class="round-btn btn-action py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold text-center">
-          Vòng khán giả
-        </button>
-        <!-- Vòng đặc biệt (Có popup 2 nút) -->
-        <button onclick="triggerRoundClick('Vòng đặc biệt')" class="round-btn btn-action py-2.5 px-3 bg-gradient-to-r from-amber-600 to-yellow-500 border border-yellow-400 text-white rounded-xl text-xs font-extrabold text-center shadow-lg shadow-amber-900/30">
-          <span>Vòng đặc biệt</span>
-          <span class="text-[10px] block opacity-85 font-normal">Popup lựa chọn</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- PHẦN 4: ĐIỀU KHIỂN Ô CHỮ (PUZZLEBOARD CONTROLS) -->
-    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
-      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
-        <div class="flex items-center gap-2">
-          <h2 class="text-sm sm:text-base font-bold text-slate-200">ĐIỀU KHIỂN Ô CHỮ TRÊN SÂN KHẤU</h2>
-        </div>
-        <div class="text-xs text-slate-400" id="puzzleBoardStatusText">
-          Trạng thái bảng: <span class="font-bold text-amber-300" id="boardStateLabel">Chưa hiển thị</span>
-        </div>
-      </div>
-
-      <!-- Các nút Ô Chữ theo đúng yêu cầu: Hiện ô chữ, Giải ô chữ, Reset bảng trống, Bắt đầu hiện chữ, dừng hiện chữ, tiếp tục hiện chữ -->
-      <div class="flex flex-wrap items-center gap-2.5 mb-4">
-        <button onclick="puzzleAction('show')" class="btn-action px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow">
-          Hiện ô chữ
-        </button>
-        <button onclick="puzzleAction('solve')" class="btn-action px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow">
-          Giải ô chữ
-        </button>
-        <button onclick="puzzleAction('reset')" class="btn-action px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-bold">
-          Reset bảng trống
-        </button>
-        <button onclick="puzzleAction('start_reveal')" class="btn-action px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold shadow">
-          Bắt đầu hiện chữ
-        </button>
-        <button onclick="puzzleAction('stop_reveal')" class="btn-action px-4 py-2 bg-rose-700 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow">
-          Dừng hiện chữ
-        </button>
-        <button onclick="puzzleAction('resume_reveal')" class="btn-action px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-xl text-xs font-bold shadow">
-          Tiếp tục hiện chữ
-        </button>
-
-        <!-- 2 NÚT MỚI: Ẩn/Hiện thanh chủ đề & Ẩn/Hiện câu hỏi -->
-        <button id="btnToggleCategory" onclick="toggleCategoryVisibility()" class="btn-action px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5">
-          <span>Chủ đề: <span id="categoryStatusLabel">Hiện</span></span>
-        </button>
-        <button id="btnToggleClue" onclick="toggleClueVisibility()" class="btn-action px-4 py-2 bg-teal-700 hover:bg-teal-600 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5">
-          <span>Câu hỏi: <span id="clueStatusLabel">Hiện</span></span>
-        </button>
-      </div>
-
-      <!-- MÀU VIỀN Ô CHỮ (Gồm 6 màu: Tím #800080, Đỏ #ff0000, Vàng #ffff00, Xanh #0000ff, Xanh lá #00ff00, Trắng #ffffff) -->
-      <div class="p-3 sm:p-4 rounded-xl bg-slate-950/60 border border-slate-800 mb-4 space-y-2.5">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">MÀU VIỀN Ô CHỮ:</span>
-            <span class="text-xs font-black px-2 py-0.5 rounded border" id="currentBorderColorBadge" style="color: #c084fc; border-color: #800080; background: rgba(128,0,128,0.2);">
-              Tím (800080)
-            </span>
-          </div>
-          <span class="text-[11px] text-slate-400">Khung màu tím mặc định cho puzzleboard</span>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-          <!-- Tím (800080) -->
-          <button onclick="setPuzzleBorderColor('#800080')" class="btn-action py-2 px-3 bg-purple-950 hover:bg-purple-900 text-purple-200 border-2 border-purple-500 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
-            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #800080; border: 1.5px solid #c084fc;"></span>
-            <span>Tím (800080)</span>
-          </button>
-          <!-- Đỏ (ff0000) -->
-          <button onclick="setPuzzleBorderColor('#ff0000')" class="btn-action py-2 px-3 bg-red-950 hover:bg-red-900 text-red-200 border-2 border-red-500 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
-            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #ff0000; border: 1.5px solid #f87171;"></span>
-            <span>Đỏ (ff0000)</span>
-          </button>
-          <!-- Vàng (ffff00) -->
-          <button onclick="setPuzzleBorderColor('#ffff00')" class="btn-action py-2 px-3 bg-yellow-950 hover:bg-yellow-900 text-yellow-300 border-2 border-yellow-400 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
-            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #ffff00; border: 1.5px solid #fef08a;"></span>
-            <span>Vàng (ffff00)</span>
-          </button>
-          <!-- Xanh (0000ff) -->
-          <button onclick="setPuzzleBorderColor('#0000ff')" class="btn-action py-2 px-3 bg-blue-950 hover:bg-blue-900 text-blue-200 border-2 border-blue-500 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
-            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #0000ff; border: 1.5px solid #60a5fa;"></span>
-            <span>Xanh (0000ff)</span>
-          </button>
-          <!-- Xanh lá (00ff00) -->
-          <button onclick="setPuzzleBorderColor('#00ff00')" class="btn-action py-2 px-3 bg-emerald-950 hover:bg-emerald-900 text-emerald-200 border-2 border-green-400 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
-            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #00ff00; border: 1.5px solid #86efac;"></span>
-            <span>Xanh lá (00ff00)</span>
-          </button>
-          <!-- Trắng (ffffff) -->
-          <button onclick="setPuzzleBorderColor('#ffffff')" class="btn-action py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-200 rounded-xl text-xs font-black shadow flex items-center justify-center gap-2">
-            <span class="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow" style="background-color: #ffffff; border: 1.5px solid #cbd5e1;"></span>
-            <span>Trắng (ffffff)</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Bảng Chữ Cái & Dò Chữ (Letter Detection, Mở lần 1 & Mở lần 2) -->
-      <div class="p-3 sm:p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Dò chữ cái:</span>
-            <div id="checkResultBadge" class="px-3.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs font-bold text-amber-300">
-              Chưa chọn chữ (Nhấn một chữ cái bên dưới để dò)
+          <!-- Public / Host Screen Links -->
+          <div class="p-3 bg-slate-950/50 border border-slate-800 rounded-xl">
+            <div class="text-xs font-bold text-slate-300 mb-2">ĐƯỜNG DẪN MÀN HÌNH KHÁC (Tự động đính kèm ?roomid=...):</div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div class="p-2 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-bold text-white">Host (MC)</div>
+                  <div class="text-[10px] text-slate-400">Màn hình điều hướng MC</div>
+                </div>
+                <a id="btnOpenHost" href="/Host.html" target="_blank" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded text-xs font-bold">
+                  Mở ↗
+                </a>
+              </div>
+              <div class="p-2 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-bold text-white">Puzzleboard (Sân khấu)</div>
+                  <div class="text-[10px] text-slate-400">Màn hình chiếu ô chữ</div>
+                </div>
+                <a id="btnOpenPuzzleboard" href="/Puzzleboard.html" target="_blank" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded text-xs font-bold">
+                  Mở ↗
+                </a>
+              </div>
+              <div class="p-2 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-bold text-white">Wheel (Mặt nón)</div>
+                  <div class="text-[10px] text-slate-400">Màn hình quay nón 22s</div>
+                </div>
+                <a id="btnOpenWheel" href="/Wheel.html" target="_blank" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded text-xs font-bold">
+                  Mở ↗
+                </a>
+              </div>
             </div>
           </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <!-- Nút Mở lần 1 (Đánh dấu) -->
-            <button onclick="openStep1Mark()" id="btnStep1Mark" class="btn-action px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-lg">
-              Mở lần 1 (Đánh dấu)
-            </button>
-            <!-- Nút Mở lần 2 (Mở chữ) -->
-            <button onclick="openStep2Reveal()" id="btnStep2Reveal" class="btn-action px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg">
-              Mở lần 2 (Mở chữ)
-            </button>
-            <button onclick="clearMarkedLetters()" class="btn-action px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700" title="Xóa đánh dấu">
-              Xóa đánh dấu
+
+          <!-- Switch Room Input -->
+          <div class="flex items-center gap-2 pt-1 text-xs">
+            <span class="text-slate-400">Chuyển sang mã phòng khác:</span>
+            <input type="text" id="switchRoomInput" placeholder="Mã phòng (6 số)..." class="w-36 h-7 px-2 bg-slate-950 border border-slate-700 rounded text-white font-mono text-xs">
+            <button onclick="handleSwitchRoom()" class="px-3 h-7 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-bold border border-slate-700">
+              Chuyển phòng
             </button>
           </div>
-        </div>
-        <div class="flex flex-wrap gap-1.5" id="alphabetKeyboard">
-          <!-- Rendered by JS -->
-        </div>
-      </div>
-    </section>
+        </section>
+      </div><!-- /tabRoom -->
 
-    <!-- PHẦN 5: CHỌN NÓN & ĐIỀU KHIỂN NÓN (WHEEL SELECTION & CONTROLS) -->
-    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
-      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
-        <div class="flex items-center gap-2">
-          <h2 class="text-sm sm:text-base font-bold text-slate-200">CHỌN NÓN & ĐIỀU KHIỂN NÓN (THỜI GIAN QUAY 22S)</h2>
-        </div>
-        <div class="text-xs text-slate-400">
-          Nón đang dùng: <span class="font-extrabold text-amber-400 text-sm px-2.5 py-0.5 rounded bg-amber-400/10 border border-amber-400/30" id="currentSelectedWheelBadge">Nón 1 (vong7.png)</span>
-        </div>
-      </div>
+      <!-- TAB 1: ĐIỀU KHIỂN Ô CHỮ & ĐỀ THI (THIẾT KẾ COMPACT VỪA KHUNG HÌNH) -->
+      <div id="tabPuzzle" class="tab-content space-y-1.5">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-1.5 items-start">
+          
+          <!-- LỚP TRÁI: NHẬP ĐỀ EXCEL + Ô CHỮ ĐANG PHÁT SÓNG + NÚT ĐIỀU KHIỂN & MÀU VIỀN (6 COLUMNS) -->
+          <div class="lg:col-span-6 space-y-1.5">
+            <!-- ĐỀ THI & Ô CHỮ ĐANG PHÁT SÓNG -->
+            <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm">
+              <div class="flex items-center justify-between mb-1 pb-1 border-b border-slate-800">
+                <h3 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                  <span>NHẬP ĐỀ & Ô CHỮ ĐANG PHÁT SÓNG</span>
+                </h3>
+                <div class="flex items-center gap-1.5">
+                  <span id="currentRoundBadgeInCard" class="text-[10px] text-amber-400 px-1.5 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
+                  <label for="excelFileInput" class="btn-action cursor-pointer px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold shadow">
+                    Nhập Excel
+                  </label>
+                  <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleExcelImport(event)">
+                </div>
+              </div>
 
-      <!-- MỤC CHỌN NÓN THEO YÊU CẦU: Nón 1(vong7.png), Nón 2(vong13.png), Nón 3(vong14.png), Nón 4(vong18.png), Nón 5(vong19.png), Nón 6(vong23.png) -->
-      <div class="mb-5">
-        <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
-          CHỌN NÓN SÂN KHẤU (Mặc định: Nón 1 - vong7.png):
-        </label>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5" id="wheelSelectionContainer">
-          <!-- Wheel 1 -->
-          <button onclick="selectWheel('vong7.png')" id="wheelBtn_vong7" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border-2 border-amber-500 text-center transition shadow flex flex-col items-center gap-2">
-            <div class="w-12 h-12 rounded-full overflow-hidden border border-amber-400/50 flex items-center justify-center bg-slate-900">
-              <img src="/vong7.png" alt="Nón 1" class="w-full h-full object-cover">
-            </div>
-            <div class="text-xs font-black text-amber-300">Nón 1</div>
-            <div class="text-[10px] text-slate-400 font-mono">vong7.png</div>
-          </button>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mb-1.5">
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-0.5">Chủ đề (Category)</label>
+                  <input type="text" id="puzzleCategoryInput" placeholder="DANH LAM THẮNG CẢNH" class="w-full h-6 px-2 bg-slate-950 border border-slate-700 rounded text-xs text-amber-300 font-bold focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-0.5">Gợi ý của MC (Clue)</label>
+                  <input type="text" id="puzzleClueInput" placeholder="Gợi ý câu hỏi..." class="w-full h-6 px-2 bg-slate-950 border border-slate-700 rounded text-xs text-slate-200 focus:outline-none">
+                </div>
+              </div>
 
-          <!-- Wheel 2 -->
-          <button onclick="selectWheel('vong13.png')" id="wheelBtn_vong13" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
-            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
-              <img src="/vong13.png" alt="Nón 2" class="w-full h-full object-cover">
-            </div>
-            <div class="text-xs font-bold text-slate-300">Nón 2</div>
-            <div class="text-[10px] text-slate-400 font-mono">vong13.png</div>
-          </button>
+              <div class="flex gap-1.5 items-end mb-1">
+                <div class="flex-grow">
+                  <label class="block text-[10px] text-slate-400 mb-0.5">Đáp án ô chữ (Answer)</label>
+                  <input type="text" id="puzzleAnswerInput" placeholder="VỊNH HẠ LONG" class="w-full h-6 px-2 bg-slate-950 border border-indigo-500/50 rounded text-xs text-white font-black tracking-wider uppercase focus:outline-none">
+                </div>
+                <button onclick="applyManualPuzzle()" class="btn-action h-6 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded shadow shrink-0">
+                  Áp dụng
+                </button>
+              </div>
 
-          <!-- Wheel 3 -->
-          <button onclick="selectWheel('vong14.png')" id="wheelBtn_vong14" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
-            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
-              <img src="/vong14.png" alt="Nón 3" class="w-full h-full object-cover">
-            </div>
-            <div class="text-xs font-bold text-slate-300">Nón 3</div>
-            <div class="text-[10px] text-slate-400 font-mono">vong14.png</div>
-          </button>
+              <div class="pt-1 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+                <div id="importedRoundsList" class="truncate max-w-[280px]">Chưa nạp file Excel</div>
+                <div>Tổng số vòng: <strong class="text-white" id="totalRoundsCount">0</strong></div>
+              </div>
+            </section>
 
-          <!-- Wheel 4 -->
-          <button onclick="selectWheel('vong18.png')" id="wheelBtn_vong18" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
-            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
-              <img src="/vong18.png" alt="Nón 4" class="w-full h-full object-cover">
-            </div>
-            <div class="text-xs font-bold text-slate-300">Nón 4</div>
-            <div class="text-[10px] text-slate-400 font-mono">vong18.png</div>
-          </button>
+            <!-- ĐIỀU KHIỂN Ô CHỮ & MÀU VIỀN -->
+            <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm space-y-1.5">
+              <div class="flex items-center justify-between pb-0.5 border-b border-slate-800">
+                <h3 class="text-xs font-bold text-slate-200">ĐIỀU KHIỂN Ô CHỮ SÂN KHẤU</h3>
+                <div class="text-[10px] text-slate-400" id="puzzleBoardStatusText">
+                  Trạng thái: <span class="font-bold text-amber-300" id="boardStateLabel">Chưa hiển thị</span>
+                </div>
+              </div>
 
-          <!-- Wheel 5 -->
-          <button onclick="selectWheel('vong19.png')" id="wheelBtn_vong19" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
-            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
-              <img src="/vong19.png" alt="Nón 5" class="w-full h-full object-cover">
-            </div>
-            <div class="text-xs font-bold text-slate-300">Nón 5</div>
-            <div class="text-[10px] text-slate-400 font-mono">vong19.png</div>
-          </button>
+              <!-- Các nút hành động ô chữ -->
+              <div class="flex flex-wrap items-center gap-1">
+                <button onclick="puzzleAction('show')" class="btn-action px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-bold shadow">
+                  Hiện ô chữ
+                </button>
+                <button onclick="puzzleAction('solve')" class="btn-action px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold shadow">
+                  Giải ô chữ
+                </button>
+                <button onclick="puzzleAction('reset')" class="btn-action px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[11px]">
+                  Reset trống
+                </button>
+                <button onclick="puzzleAction('start_reveal')" class="btn-action px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-[11px] font-bold shadow">
+                  Bắt đầu hiện
+                </button>
+                <button onclick="puzzleAction('stop_reveal')" class="btn-action px-2.5 py-1 bg-rose-700 hover:bg-rose-600 text-white rounded text-[11px] font-bold shadow">
+                  Dừng hiện
+                </button>
+                <button onclick="puzzleAction('resume_reveal')" class="btn-action px-2.5 py-1 bg-cyan-700 hover:bg-cyan-600 text-white rounded text-[11px] font-bold shadow">
+                  Tiếp tục hiện
+                </button>
 
-          <!-- Wheel 6 -->
-          <button onclick="selectWheel('vong23.png')" id="wheelBtn_vong23" class="wheel-select-btn p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-center transition shadow flex flex-col items-center gap-2">
-            <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
-              <img src="/vong23.png" alt="Nón 6" class="w-full h-full object-cover">
-            </div>
-            <div class="text-xs font-bold text-slate-300">Nón 6</div>
-            <div class="text-[10px] text-slate-400 font-mono">vong23.png</div>
-          </button>
-        </div>
-      </div>
+                <button id="btnToggleCategory" onclick="toggleCategoryVisibility()" class="btn-action px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-[11px] font-bold shadow">
+                  Chủ đề: <span id="categoryStatusLabel">Hiện</span>
+                </button>
+                <button id="btnToggleClue" onclick="toggleClueVisibility()" class="btn-action px-2.5 py-1 bg-teal-700 hover:bg-teal-600 text-white rounded text-[11px] font-bold shadow">
+                  Câu hỏi: <span id="clueStatusLabel">Hiện</span>
+                </button>
+              </div>
 
-      <!-- Các nút điều khiển nón theo đúng yêu cầu: Quay Nón, Mở quay Player 1, Mở quay Player 2, Mở quay Player 3, Khóa tất cả -->
-      <div class="flex flex-wrap items-center gap-2.5">
-        <!-- Quay Nón (trực tiếp từ Controller, duration 22s) -->
-        <button onclick="triggerWheelSpin()" class="btn-action px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-xl text-xs sm:text-sm shadow-lg shadow-amber-500/20">
-          <span>Quay Nón (22s)</span>
-        </button>
+              <!-- MÀU VIỀN Ô CHỮ (6 MÀU) -->
+              <div class="p-1.5 rounded bg-slate-950/70 border border-slate-800">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-[10px] font-bold text-slate-300 uppercase">MÀU VIỀN Ô CHỮ:</span>
+                  <span class="text-[10px] font-black px-1.5 py-0.5 rounded border" id="currentBorderColorBadge" style="color: #c084fc; border-color: #800080; background: rgba(128,0,128,0.2);">
+                    Tím (800080)
+                  </span>
+                </div>
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-1">
+                  <button onclick="setPuzzleBorderColor('#800080')" class="btn-action py-0.5 px-1 bg-purple-950 hover:bg-purple-900 text-purple-200 border border-purple-500 rounded text-[10px] font-bold flex items-center justify-center gap-1">
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: #800080;"></span>
+                    <span>Tím</span>
+                  </button>
+                  <button onclick="setPuzzleBorderColor('#ff0000')" class="btn-action py-0.5 px-1 bg-red-950 hover:bg-red-900 text-red-200 border border-red-500 rounded text-[10px] font-bold flex items-center justify-center gap-1">
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: #ff0000;"></span>
+                    <span>Đỏ</span>
+                  </button>
+                  <button onclick="setPuzzleBorderColor('#ffff00')" class="btn-action py-0.5 px-1 bg-yellow-950 hover:bg-yellow-900 text-yellow-300 border border-yellow-400 rounded text-[10px] font-bold flex items-center justify-center gap-1">
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: #ffff00;"></span>
+                    <span>Vàng</span>
+                  </button>
+                  <button onclick="setPuzzleBorderColor('#0000ff')" class="btn-action py-0.5 px-1 bg-blue-950 hover:bg-blue-900 text-blue-200 border border-blue-500 rounded text-[10px] font-bold flex items-center justify-center gap-1">
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: #0000ff;"></span>
+                    <span>Xanh</span>
+                  </button>
+                  <button onclick="setPuzzleBorderColor('#00ff00')" class="btn-action py-0.5 px-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-200 border border-green-400 rounded text-[10px] font-bold flex items-center justify-center gap-1">
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: #00ff00;"></span>
+                    <span>Xanh lá</span>
+                  </button>
+                  <button onclick="setPuzzleBorderColor('#ffffff')" class="btn-action py-0.5 px-1 bg-slate-800 hover:bg-slate-700 text-white border border-slate-200 rounded text-[10px] font-bold flex items-center justify-center gap-1">
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: #ffffff;"></span>
+                    <span>Trắng</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
 
-        <!-- Mở quay Player 1 -->
-        <button onclick="allowPlayerSpin(1)" class="btn-action px-4 py-2.5 bg-red-600/90 hover:bg-red-500 text-white rounded-xl text-xs font-bold border border-red-500/30">
-          Mở quay Player 1
-        </button>
+          <!-- LỚP PHẢI: BẢNG CHỮ CÁI A-Z + DÒ CHỮ + 4 LIST NHẠC HIỆU ỨNG (6 COLUMNS) -->
+          <div class="lg:col-span-6 space-y-1.5">
+            <!-- BẢNG CHỮ CÁI & DÒ CHỮ -->
+            <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm space-y-1.5">
+              <div class="flex flex-wrap items-center justify-between gap-1 pb-1 border-b border-slate-800">
+                <div id="checkResultBadge" class="px-2 py-0.5 rounded bg-slate-950 border border-slate-700 text-[11px] font-bold text-amber-300">
+                  Chưa chọn chữ (Nhấn chữ A-Z bên dưới)
+                </div>
+                <div class="flex items-center gap-1">
+                  <button onclick="openStep1Mark()" id="btnStep1Mark" class="btn-action px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-bold shadow">
+                    Mở lần 1 (Đánh dấu)
+                  </button>
+                  <button onclick="openStep2Reveal()" id="btnStep2Reveal" class="btn-action px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold shadow">
+                    Mở lần 2 (Mở chữ)
+                  </button>
+                  <button onclick="clearMarkedLetters()" class="btn-action px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] border border-slate-700">
+                    Xóa dấu
+                  </button>
+                </div>
+              </div>
 
-        <!-- Mở quay Player 2 -->
-        <button onclick="allowPlayerSpin(2)" class="btn-action px-4 py-2.5 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold border border-emerald-500/30">
-          Mở quay Player 2
-        </button>
+              <!-- Bàn phím chữ cái A-Z siêu gọn -->
+              <div class="flex flex-wrap gap-1" id="alphabetKeyboard">
+                <!-- Rendered by JS -->
+              </div>
+            </section>
 
-        <!-- Mở quay Player 3 -->
-        <button onclick="allowPlayerSpin(3)" class="btn-action px-4 py-2.5 bg-blue-600/90 hover:bg-blue-500 text-white rounded-xl text-xs font-bold border border-blue-500/30">
-          Mở quay Player 3
-        </button>
+            <!-- CẤU HÌNH NHẠC HIỆU ỨNG DÒ CHỮ & Ô CHỮ (4 LIST DROPDOWN LỚI LẠI GỌN) -->
+            <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm">
+              <h3 class="text-[11px] font-bold text-amber-300 uppercase mb-1">CẤU HÌNH NHẠC HIỆU ỨNG Ô CHỮ:</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                <!-- List 1 -->
+                <div class="bg-slate-950 p-1.5 rounded border border-slate-800 flex items-center gap-1">
+                  <label class="text-[10px] font-bold text-slate-300 shrink-0 w-24">1. Ô trống:</label>
+                  <select id="puzzleSound_showBlank" onchange="setPuzzleSound('showBlank')" class="bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-200 px-1 py-0.5 flex-1 focus:outline-none">
+                    <option value="reveal.mp3">reveal.mp3</option>
+                    <option value="showpuzzle.wav">showpuzzle.wav</option>
+                    <option value="nhac_hien_o_chu.mp3">nhac_hien_o_chu.mp3</option>
+                    <option value="Reveal_the_Letters.wav">Reveal_the_Letters.wav</option>
+                    <option value="mo o chu 2001 2.mp3">mo o chu 2001 2.mp3</option>
+                    <option value="Open.mp3">Open.mp3</option>
+                    <option value="Open_2.mp3">Open_2.mp3</option>
+                    <option value="Open_3.mp3">Open_3.mp3</option>
+                    <option value="None">None</option>
+                  </select>
+                  <button onclick="setPuzzleSound('showBlank')" class="btn-action px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] rounded">Set</button>
+                </div>
 
-        <!-- Khóa tất cả -->
-        <button onclick="lockAllSpins()" class="btn-action px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold">
-          Khóa tất cả
-        </button>
-      </div>
+                <!-- List 2 -->
+                <div class="bg-slate-950 p-1.5 rounded border border-slate-800 flex items-center gap-1">
+                  <label class="text-[10px] font-bold text-slate-300 shrink-0 w-24">2. Đánh dấu:</label>
+                  <select id="puzzleSound_markLetter" onchange="setPuzzleSound('markLetter')" class="bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-200 px-1 py-0.5 flex-1 focus:outline-none">
+                    <option value="ding.wav">ding.wav</option>
+                    <option value="letter_highlight_new.wav">letter_highlight_new.wav</option>
+                    <option value="None">None</option>
+                  </select>
+                  <button onclick="setPuzzleSound('markLetter')" class="btn-action px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] rounded">Set</button>
+                </div>
 
-      <!-- ĐIỀU KHIỂN ĐÈN KIM & ẨN HIỆN KIM NÓN (POINTERS) -->
-      <div class="mt-4 pt-4 border-t border-slate-800">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <span>ĐIỀU KHIỂN ĐÈN & TRẠNG THÁI KIM NÓN:</span>
-          </label>
-          <div class="flex items-center gap-2 text-[11px] flex-wrap">
-            <span id="p1_statusBadge" class="px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40 font-bold">Kim Đỏ: Bật / Hiện</span>
-            <span id="p2_statusBadge" class="px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 font-bold">Kim Vàng: Bật / Hiện</span>
-            <span id="p3_statusBadge" class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 font-bold">Kim Xanh: Bật / Hiện</span>
+                <!-- List 3 -->
+                <div class="bg-slate-950 p-1.5 rounded border border-slate-800 flex items-center gap-1">
+                  <label class="text-[10px] font-bold text-slate-300 shrink-0 w-24">3. Mở chữ:</label>
+                  <select id="puzzleSound_openLetter" onchange="setPuzzleSound('openLetter')" class="bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-200 px-1 py-0.5 flex-1 focus:outline-none">
+                    <option value="2nd_ding.wav">2nd_ding.wav</option>
+                    <option value="letter_open.wav">letter_open.wav</option>
+                    <option value="letter_open_1.wav">letter_open_1.wav</option>
+                    <option value="None">None</option>
+                  </select>
+                  <button onclick="setPuzzleSound('openLetter')" class="btn-action px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] rounded">Set</button>
+                </div>
+
+                <!-- List 4 -->
+                <div class="bg-slate-950 p-1.5 rounded border border-slate-800 flex items-center gap-1">
+                  <label class="text-[10px] font-bold text-slate-300 shrink-0 w-24">4. Giải ô chữ:</label>
+                  <select id="puzzleSound_solvePuzzle" onchange="setPuzzleSound('solvePuzzle')" class="bg-slate-900 border border-slate-700 rounded text-[10px] text-slate-200 px-1 py-0.5 flex-1 focus:outline-none">
+                    <option value="ClearPuzzle.mp3">ClearPuzzle.mp3</option>
+                    <option value="ClearTossUp.mp3">ClearTossUp.mp3</option>
+                    <option value="solved.mp3">solved.mp3</option>
+                    <option value="solved 2001.mp3">solved 2001.mp3</option>
+                    <option value="None">None</option>
+                  </select>
+                  <button onclick="setPuzzleSound('solvePuzzle')" class="btn-action px-1.5 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] rounded">Set</button>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
+      </div><!-- /tabPuzzle -->
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
-          <!-- Kim Đỏ (Bật/Tắt đèn Kim 1) -->
-          <button id="btnToggleKimDo" onclick="togglePointerLight('p1')" class="btn-action px-3 py-2 bg-red-600/90 hover:bg-red-500 text-white rounded-xl text-xs font-bold border border-red-500/40 flex items-center justify-center gap-1.5 shadow">
-            <span>Kim Đỏ</span>
-          </button>
+      <!-- TAB 2: VÒNG CHƠI & NÓN (THIẾT KẾ COMPACT VỪA KHUNG HÌNH) -->
+      <div id="tabWheel" class="tab-content hidden space-y-1.5">
+        <!-- VÒNG CHƠI (CÁC NÚT VÒNG CHƠI - 12 NÚT XẮP TRÊN 1 HÀNG) -->
+        <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm">
+          <div class="flex items-center justify-between mb-1 pb-0.5 border-b border-slate-800">
+            <h2 class="text-xs font-bold text-slate-200">MỤC VÒNG CHƠI</h2>
+            <div class="text-[10px]">
+              Vòng hiện tại: <span id="currentRoundDisplay" class="font-extrabold text-amber-400 text-xs px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
+            </div>
+          </div>
 
-          <!-- Kim Vàng (Bật/Tắt đèn Kim 2) -->
-          <button id="btnToggleKimVang" onclick="togglePointerLight('p2')" class="btn-action px-3 py-2 bg-yellow-600/90 hover:bg-yellow-500 text-white rounded-xl text-xs font-bold border border-yellow-500/40 flex items-center justify-center gap-1.5 shadow">
-            <span>Kim Vàng</span>
-          </button>
+          <!-- 12 Nút Vòng Chơi -->
+          <div class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-1">
+            <button onclick="triggerRoundClick('Đoán nhanh 1')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Đoán nhanh 1
+            </button>
+            <button onclick="triggerRoundClick('Đoán nhanh 2')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Đoán nhanh 2
+            </button>
+            <button onclick="triggerRoundClick('Vòng 1')" class="round-btn btn-action py-1 px-1 bg-indigo-600 border border-indigo-400 text-white rounded text-[10px] font-bold text-center">
+              Vòng 1
+            </button>
+            <button onclick="triggerRoundClick('Vòng 2')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Vòng 2
+            </button>
+            <button onclick="triggerRoundClick('Vòng 3')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Vòng 3
+            </button>
+            <button onclick="triggerRoundClick('Đoán nhanh 3')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Đoán nhanh 3
+            </button>
+            <button onclick="triggerRoundClick('ĐNLH 1')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              ĐNLH 1
+            </button>
+            <button onclick="triggerRoundClick('ĐNLH 2')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              ĐNLH 2
+            </button>
+            <button onclick="triggerRoundClick('ĐNLH 3')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              ĐNLH 3
+            </button>
+            <button onclick="triggerRoundClick('Vòng 4')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Vòng 4
+            </button>
+            <button onclick="triggerRoundClick('Vòng khán giả')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Vòng khán giả
+            </button>
+            <button onclick="triggerRoundClick('Vòng đặc biệt')" class="round-btn btn-action py-1 px-1 bg-gradient-to-r from-amber-600 to-yellow-500 border border-yellow-400 text-white rounded text-[10px] font-black text-center shadow">
+              Vòng đặc biệt
+            </button>
+          </div>
+        </section>
 
-          <!-- Kim Xanh (Bật/Tắt đèn Kim 3) -->
-          <button id="btnToggleKimXanh" onclick="togglePointerLight('p3')" class="btn-action px-3 py-2 bg-blue-600/90 hover:bg-blue-500 text-white rounded-xl text-xs font-bold border border-blue-500/40 flex items-center justify-center gap-1.5 shadow">
-            <span>Kim Xanh</span>
-          </button>
+        <!-- KHUNG CHÍNH TAB 2: CHỌN NÓN & ĐIỀU KHIỂN (LỚP TRÁI) + ẨN HIỆN Ô THẺ (LỚP PHẢI) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-1.5 items-start">
+          
+          <!-- LỚP TRÁI: CHỌN NÓN (NÓN 1 - NÓN 6) + QUAY NÓN (22S) + KIM NÓN & NHẠC (6 COLUMNS) -->
+          <div class="lg:col-span-6 space-y-1.5">
+            <!-- CHỌN NÓN -->
+            <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm">
+              <div class="flex items-center justify-between mb-1 pb-1 border-b border-slate-800">
+                <h3 class="text-xs font-bold text-slate-200">CHỌN NÓN SÂN KHẤU</h3>
+                <span class="text-[10px] font-extrabold text-amber-400 px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30" id="currentSelectedWheelBadge">Nón 1</span>
+              </div>
 
-          <!-- Bật tất cả (Cả 3 kim sáng đèn) -->
-          <button onclick="setAllPointerLights(true)" class="btn-action px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-emerald-100 rounded-xl text-xs font-bold border border-emerald-500/40 flex items-center justify-center gap-1.5 shadow">
-            <span>Bật tất cả</span>
-          </button>
+              <!-- 6 Nón -->
+              <div class="grid grid-cols-3 sm:grid-cols-6 gap-1" id="wheelSelectionContainer">
+                <button onclick="selectWheel('vong7.png')" id="wheelBtn_vong7" class="wheel-select-btn p-1 rounded bg-slate-950 border border-amber-500 text-center transition shadow flex flex-col items-center gap-0.5">
+                  <div class="w-6 h-6 rounded-full overflow-hidden border border-amber-400/50 flex items-center justify-center bg-slate-900">
+                    <img src="/vong7.png" alt="Nón 1" class="w-full h-full object-cover">
+                  </div>
+                  <div class="text-[10px] font-black text-amber-300">Nón 1</div>
+                </button>
+                <button onclick="selectWheel('vong13.png')" id="wheelBtn_vong13" class="wheel-select-btn p-1 rounded bg-slate-950 border border-slate-800 text-center transition shadow flex flex-col items-center gap-0.5">
+                  <div class="w-6 h-6 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+                    <img src="/vong13.png" alt="Nón 2" class="w-full h-full object-cover">
+                  </div>
+                  <div class="text-[10px] font-bold text-slate-300">Nón 2</div>
+                </button>
+                <button onclick="selectWheel('vong14.png')" id="wheelBtn_vong14" class="wheel-select-btn p-1 rounded bg-slate-950 border border-slate-800 text-center transition shadow flex flex-col items-center gap-0.5">
+                  <div class="w-6 h-6 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+                    <img src="/vong14.png" alt="Nón 3" class="w-full h-full object-cover">
+                  </div>
+                  <div class="text-[10px] font-bold text-slate-300">Nón 3</div>
+                </button>
+                <button onclick="selectWheel('vong18.png')" id="wheelBtn_vong18" class="wheel-select-btn p-1 rounded bg-slate-950 border border-slate-800 text-center transition shadow flex flex-col items-center gap-0.5">
+                  <div class="w-6 h-6 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+                    <img src="/vong18.png" alt="Nón 4" class="w-full h-full object-cover">
+                  </div>
+                  <div class="text-[10px] font-bold text-slate-300">Nón 4</div>
+                </button>
+                <button onclick="selectWheel('vong19.png')" id="wheelBtn_vong19" class="wheel-select-btn p-1 rounded bg-slate-950 border border-slate-800 text-center transition shadow flex flex-col items-center gap-0.5">
+                  <div class="w-6 h-6 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+                    <img src="/vong19.png" alt="Nón 5" class="w-full h-full object-cover">
+                  </div>
+                  <div class="text-[10px] font-bold text-slate-300">Nón 5</div>
+                </button>
+                <button onclick="selectWheel('vong23.png')" id="wheelBtn_vong23" class="wheel-select-btn p-1 rounded bg-slate-950 border border-slate-800 text-center transition shadow flex flex-col items-center gap-0.5">
+                  <div class="w-6 h-6 rounded-full overflow-hidden border border-slate-700 flex items-center justify-center bg-slate-900">
+                    <img src="/vong23.png" alt="Nón 6" class="w-full h-full object-cover">
+                  </div>
+                  <div class="text-[10px] font-bold text-slate-300">Nón 6</div>
+                </button>
+              </div>
+            </section>
 
-          <!-- Tắt tất cả (Cả 3 kim tắt đèn -> pointer4.png) -->
-          <button onclick="setAllPointerLights(false)" class="btn-action px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700 flex items-center justify-center gap-1.5 shadow">
-            <span>Tắt tất cả</span>
-          </button>
+            <!-- ĐIỀU KHIỂN NÓN, ĐÈN KIM & NHẠC QUAY -->
+            <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm space-y-1.5">
+              <!-- Action buttons -->
+              <div class="flex flex-wrap items-center gap-1">
+                <button onclick="triggerWheelSpin()" class="btn-action px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black rounded text-xs shadow">
+                  Quay Nón (22s)
+                </button>
+                <button onclick="allowPlayerSpin(1)" class="btn-action px-2.5 py-1 bg-red-600/90 hover:bg-red-500 text-white rounded text-[11px] font-bold">
+                  Mở quay P1
+                </button>
+                <button onclick="allowPlayerSpin(2)" class="btn-action px-2.5 py-1 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded text-[11px] font-bold">
+                  Mở quay P2
+                </button>
+                <button onclick="allowPlayerSpin(3)" class="btn-action px-2.5 py-1 bg-blue-600/90 hover:bg-blue-500 text-white rounded text-[11px] font-bold">
+                  Mở quay P3
+                </button>
+                <button onclick="lockAllSpins()" class="btn-action px-2.5 py-1 bg-slate-800 text-rose-400 border border-rose-500/30 rounded text-[11px] font-bold">
+                  Khóa tất cả
+                </button>
+              </div>
 
-          <!-- Ẩn/Hiện Kim 1 (Đỏ) -->
-          <button id="btnToggleVisKim1" onclick="togglePointerVisibility('p1')" class="btn-action px-3 py-2 bg-slate-800 hover:bg-slate-700 text-red-300 rounded-xl text-xs font-bold border border-red-500/30 flex items-center justify-center gap-1">
-            <span>Ẩn/Hiện Kim 1</span>
-          </button>
+              <!-- Pointers & Lights -->
+              <div class="pt-1 border-t border-slate-800 space-y-1">
+                <div class="flex items-center justify-between text-[10px]">
+                  <span class="font-bold text-slate-300">ĐÈN & TRẠNG THÁI KIM:</span>
+                  <div class="flex items-center gap-1">
+                    <span id="p1_statusBadge" class="px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 text-[9px] font-bold">Kim 1: BẬT/HIỆN</span>
+                    <span id="p2_statusBadge" class="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 text-[9px] font-bold">Kim 2: BẬT/HIỆN</span>
+                    <span id="p3_statusBadge" class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[9px] font-bold">Kim 3: BẬT/HIỆN</span>
+                  </div>
+                </div>
 
-          <!-- Ẩn/Hiện Kim 3 (Xanh) -->
-          <button id="btnToggleVisKim3" onclick="togglePointerVisibility('p3')" class="btn-action px-3 py-2 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded-xl text-xs font-bold border border-blue-500/30 flex items-center justify-center gap-1">
-            <span>Ẩn/Hiện Kim 3</span>
-          </button>
+                <div class="grid grid-cols-4 sm:grid-cols-7 gap-1">
+                  <button id="btnToggleKimDo" onclick="togglePointerLight('p1')" class="btn-action py-1 px-1 bg-red-600/90 text-white rounded text-[10px] font-bold">
+                    Kim Đỏ
+                  </button>
+                  <button id="btnToggleKimVang" onclick="togglePointerLight('p2')" class="btn-action py-1 px-1 bg-yellow-600/90 text-white rounded text-[10px] font-bold">
+                    Kim Vàng
+                  </button>
+                  <button id="btnToggleKimXanh" onclick="togglePointerLight('p3')" class="btn-action py-1 px-1 bg-blue-600/90 text-white rounded text-[10px] font-bold">
+                    Kim Xanh
+                  </button>
+                  <button onclick="setAllPointerLights(true)" class="btn-action py-1 px-1 bg-emerald-700 text-white rounded text-[10px] font-bold">
+                    Bật tất cả
+                  </button>
+                  <button onclick="setAllPointerLights(false)" class="btn-action py-1 px-1 bg-slate-800 text-slate-300 rounded text-[10px] font-bold">
+                    Tắt tất cả
+                  </button>
+                  <button id="btnToggleVisKim1" onclick="togglePointerVisibility('p1')" class="btn-action py-1 px-1 bg-slate-800 text-red-300 border border-red-500/30 rounded text-[10px] font-bold">
+                    Ẩn/Hiện K1
+                  </button>
+                  <button id="btnToggleVisKim3" onclick="togglePointerVisibility('p3')" class="btn-action py-1 px-1 bg-slate-800 text-blue-300 border border-blue-500/30 rounded text-[10px] font-bold">
+                    Ẩn/Hiện K3
+                  </button>
+                </div>
+              </div>
+
+              <!-- Spin Music config -->
+              <div class="pt-1 border-t border-slate-800 flex flex-wrap items-center justify-between gap-1 text-[10px]">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="font-bold text-slate-300">NHẠC QUAY NÓN:</span>
+                  <label class="inline-flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="spinMusicChoice" value="Nhạc quay Nón 1.mp3" class="accent-amber-500" checked>
+                    <span>Nón 1.mp3</span>
+                  </label>
+                  <label class="inline-flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="spinMusicChoice" value="Nhạc quay Nón 2.mp3" class="accent-amber-500">
+                    <span>Nón 2.mp3</span>
+                  </label>
+                  <label class="inline-flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="spinMusicChoice" value="Nhạc quay Nón 3.mp3" class="accent-amber-500">
+                    <span>Nón 3.mp3</span>
+                  </label>
+                  <label class="inline-flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="spinMusicChoice" value="spin4.mp3" class="accent-amber-500">
+                    <span>spin4.mp3</span>
+                  </label>
+                </div>
+                <button onclick="saveSpinMusicConfig()" class="btn-action px-2 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10px] rounded">
+                  Lưu nhạc
+                </button>
+              </div>
+
+              <!-- Status -->
+              <div class="pt-1 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+                <div>Quyền quay: <span id="spinPermissionStatus" class="font-bold text-slate-200">Đang khóa tất cả</span></div>
+                <div>Trạng thái: <span id="wheelSpinningStatus" class="font-bold text-slate-400">Đứng yên</span></div>
+              </div>
+            </section>
+          </div>
+
+          <!-- LỚP PHẢI: ẨN / HIỆN Ô THẺ TRÊN NÓN (6 COLUMNS) -->
+          <div class="lg:col-span-6">
+            <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm space-y-1.5">
+              <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+                <h3 class="text-xs font-bold text-amber-400">ẨN / HIỆN Ô THẺ TRÊN NÓN</h3>
+                <div class="flex items-center gap-1">
+                  <button onclick="setAllOverlays(true)" class="btn-action px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded">
+                    Hiện tất cả
+                  </button>
+                  <button onclick="setAllOverlays(false)" class="btn-action px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-rose-300 text-[10px] font-bold rounded">
+                    Ẩn tất cả
+                  </button>
+                </div>
+              </div>
+
+              <div id="overlayGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-1 max-h-[300px] overflow-y-auto pr-0.5">
+                <!-- Dyn rendered slice items -->
+              </div>
+            </section>
+          </div>
+        </div>
+      </div><!-- /tabWheel -->
+
+      <!-- TAB 3: QUẢN LÝ SOUNDBOARD -->
+      <div id="tabSound" class="tab-content hidden space-y-2">
+        <!-- PHẦN 5C: QUẢN LÝ SOUNDBOARD -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h2 class="text-sm font-black tracking-wide text-amber-400 flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block animate-pulse"></span>
+          QUẢN LÝ SOUNDBOARD
+        </h2>
+        <div class="text-xs text-slate-400 italic">Phát nhạc âm thanh tới tất cả màn hình ngoại trừ Controller</div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Soundboard 2012 (1/3) -->
+        <div class="view-column col-1-3 flex flex-col gap-2">
+            <h3 class="text-xs font-bold text-amber-300 uppercase tracking-wider border-b border-slate-800 pb-1">Soundboard(2012)</h3>
+            <div class="scrollable-content">
+                <div class="group flex flex-wrap gap-1.5" style="background: #111; padding: 8px; border-radius: 6px; border: 1px dashed #5ac8fa;">
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc nền 1.mp3')">Nhạc nền 1</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc nền 2.mp3')">Nhạc nền 2</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc nền 3.mp3')">Nhạc nền 3</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc nền 4.mp3')">Nhạc nền 4</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc nền 5.mp3')">Nhạc nền 5</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc nền 6.mp3')">Nhạc nền 6</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc nền 7.mp3')">Nhạc nền 7</button>
+
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Intro.mp3')">Intro</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Open.mp3')">Open</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Credit.mp3')">Credit</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Phần thưởng.mp3')">Phần thưởng</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Ô Bí Mật.mp3')">Ô Bí Mật</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Mất Lượt.mp3')">Mất Lượt</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Mất Điểm.mp3')">Mất Điểm</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Thêm Lượt.mp3')">Thêm Lượt</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'May Mắn.mp3')">May Mắn</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhân Đôi.mp3')">Nhân Đôi</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Chia Đôi.mp3')">Chia Đôi</button>
+
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Vòng đặc biệt.mp3')">Vòng đặc biệt</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Vòng chung kết.mp3')">Vòng chung kết</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc quay Nón 1.mp3')">Nhạc quay 1</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc quay Nón 2.mp3')">Nhạc quay 2</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Nhạc quay Nón 3.mp3')">Nhạc quay 3</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Người chơi.mp3')">Người chơi</button>
+
+                    <button class="btn-action rounded font-bold transition-all hover:bg-red-600" style="background-color: #ff0000; color: #fff; width: 100%; margin-top: 4px; padding: 6px;" onclick="sendCmd('STOP_SOUNDBOARD')">DỪNG NHẠC</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Soundboard 2001 (1/3) -->
+        <div class="view-column col-1-3 flex flex-col gap-2">
+            <h3 class="text-xs font-bold text-amber-300 uppercase tracking-wider border-b border-slate-800 pb-1">Soundboard(2001)</h3>
+            <div class="scrollable-content">
+                <div class="group flex flex-wrap gap-1.5" style="background: #111; padding: 8px; border-radius: 6px; border: 1px dashed #5ac8fa;">
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'intro_2001_full.mp3')">Intro</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'nhac_host_entrance.mp3')">Open</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'solved 2001.mp3')">Solve</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'letter_open_1.wav')">Mở chữ</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'mo o chu 2001 2.mp3')">Đánh dấu</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'nhac_hien_o_chu.mp3')">Hiện ô chữ</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'nhac_prize_vđb_1.mp3')">Vòng Đặc biệt</button>
+
+                    <button class="btn-action rounded font-bold transition-all hover:bg-red-600" style="background-color: #ff0000; color: #fff; width: 100%; margin-top: 4px; padding: 6px;" onclick="sendCmd('STOP_SOUNDBOARD')">DỪNG NHẠC</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Soundboard 2011 (1/3) -->
+        <div class="view-column col-1-3 flex flex-col gap-2">
+            <h3 class="text-xs font-bold text-amber-300 uppercase tracking-wider border-b border-slate-800 pb-1">Soundboard(2011)</h3>
+            <div class="scrollable-content">
+                <div class="group flex flex-wrap gap-1.5" style="background: #111; padding: 8px; border-radius: 6px; border: 1px dashed #5ac8fa;">
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'intro_2001_full.mp3')">Intro</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'intro 2010.mp3')">Open(1)</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Credit_2011.mp3')">Credit</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'letter_highlight_new.wav')">Đánh dấu</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'letter_open.wav')">Mở chữ</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'showpuzzle.wav')">Hiện ô chữ</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'solved.mp3')">Solve</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'wrong_1.mp3')">Sai</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Open_2.mp3')">Open(2)</button>
+                    <button class="btn-action rounded font-bold transition-all hover:scale-105" style="background-color: #39ff14; color: #000; font-size: 11px; padding: 6px 10px;" onclick="sendCmd('PLAY_SOUNDBOARD', 'Open_3.mp3')">Open(3)</button>
+
+                    <button class="btn-action rounded font-bold transition-all hover:bg-red-600" style="background-color: #ff0000; color: #fff; width: 100%; margin-top: 4px; padding: 6px;" onclick="sendCmd('STOP_SOUNDBOARD')">DỪNG NHẠC</button>
+                </div>
+            </div>
         </div>
       </div>
-
-      <!-- Trạng thái quyền quay -->
-      <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-        <div>Quyền quay: <span id="spinPermissionStatus" class="font-bold text-slate-200">Đang khóa tất cả</span></div>
-        <div>Trạng thái: <span id="wheelSpinningStatus" class="font-bold text-slate-400">Đứng yên</span></div>
-      </div>
     </section>
+      </div><!-- /tabSound -->
 
-    <!-- PHẦN 6: CHUÔNG GIÀNH QUYỀN & RESET HỆ THỐNG -->
+      <!-- TAB 4: CHUÔNG GIÀNH QUYỀN & HỆ THỐNG -->
+      <div id="tabBuzzer" class="tab-content hidden space-y-2">
+        <!-- PHẦN 6: CHUÔNG GIÀNH QUYỀN & RESET HỆ THỐNG -->
     <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <div>
@@ -738,6 +1022,9 @@
         </button>
       </div>
     </section>
+      </div><!-- /tabBuzzer -->
+
+    </div><!-- /flex-1 overflow-y-auto -->
 
   </main>
 
@@ -745,6 +1032,194 @@
     const socket = io();
     let localGameState = null;
     let pendingRoundChoice = null;
+
+    // Multi-room management
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentRoomId = urlParams.get('roomid') || '';
+    let currentRoomData = null;
+
+    function getSlotPassword(passwords, slot) {
+      if (!passwords) return '----';
+      const p = passwords[slot] || passwords['p' + slot] || passwords[String(slot)];
+      return p ? String(p) : '----';
+    }
+
+    function updateRoomUI(roomData) {
+      if (!roomData) return;
+      currentRoomData = roomData;
+      currentRoomId = roomData.roomId;
+
+      // Update Header
+      const headerDisp = document.getElementById('headerRoomIdDisplay');
+      if (headerDisp) headerDisp.innerText = currentRoomId;
+
+      // Update Tab Room
+      const roomDisp = document.getElementById('roomDisplayId');
+      if (roomDisp) roomDisp.innerText = currentRoomId;
+
+      const p1Pass = document.getElementById('roomP1Pass');
+      if (p1Pass) p1Pass.innerText = getSlotPassword(roomData.passwords, 1);
+      const p2Pass = document.getElementById('roomP2Pass');
+      if (p2Pass) p2Pass.innerText = getSlotPassword(roomData.passwords, 2);
+      const p3Pass = document.getElementById('roomP3Pass');
+      if (p3Pass) p3Pass.innerText = getSlotPassword(roomData.passwords, 3);
+
+      // Update Nav links
+      const hostUrl = `/Host.html?roomid=${encodeURIComponent(currentRoomId)}`;
+      const puzzleUrl = `/Puzzleboard.html?roomid=${encodeURIComponent(currentRoomId)}`;
+      const wheelUrl = `/Wheel.html?roomid=${encodeURIComponent(currentRoomId)}`;
+      
+      const p1Auth = getSlotPassword(roomData.passwords, 1);
+      const p2Auth = getSlotPassword(roomData.passwords, 2);
+      const p3Auth = getSlotPassword(roomData.passwords, 3);
+
+      const p1Url = `/Player1.html?roomid=${encodeURIComponent(currentRoomId)}&auth=${encodeURIComponent(p1Auth !== '----' ? p1Auth : '')}`;
+      const p2Url = `/Player2.html?roomid=${encodeURIComponent(currentRoomId)}&auth=${encodeURIComponent(p2Auth !== '----' ? p2Auth : '')}`;
+      const p3Url = `/Player3.html?roomid=${encodeURIComponent(currentRoomId)}&auth=${encodeURIComponent(p3Auth !== '----' ? p3Auth : '')}`;
+
+      const setHref = (id, href) => {
+        const el = document.getElementById(id);
+        if (el) el.href = href;
+      };
+
+      setHref('navHostLink', hostUrl);
+      setHref('navPuzzleboardLink', puzzleUrl);
+      setHref('navWheelLink', wheelUrl);
+      setHref('navP1Link', p1Url);
+      setHref('navP2Link', p2Url);
+      setHref('navP3Link', p3Url);
+
+      setHref('btnOpenHost', hostUrl);
+      setHref('btnOpenPuzzleboard', puzzleUrl);
+      setHref('btnOpenWheel', wheelUrl);
+      setHref('btnOpenP1', p1Url);
+      setHref('btnOpenP2', p2Url);
+      setHref('btnOpenP3', p3Url);
+
+      // Keep URL synced without full page reload
+      const newUrl = window.location.pathname + '?roomid=' + encodeURIComponent(currentRoomId);
+      window.history.replaceState({ path: newUrl }, '', newUrl);
+    }
+
+    async function generateNewRoom() {
+      try {
+        const res = await fetch('/api/room/create', { method: 'POST' });
+        const data = await res.json();
+        if (data && data.roomId) {
+          updateRoomUI(data);
+          socket.emit('room:join', { roomId: currentRoomId, role: 'controller' });
+          fetchState();
+          showToast(`Đã tạo phòng mới thành công: ${data.roomId}`, 'success');
+        }
+      } catch (err) {
+        showToast('Không thể tạo phòng: ' + err.message, 'error');
+      }
+    }
+
+    async function loadRoomInfo(roomId) {
+      try {
+        const res = await fetch('/api/room/info?roomid=' + encodeURIComponent(roomId));
+        if (res.ok) {
+          const data = await res.json();
+          updateRoomUI(data);
+          return true;
+        } else {
+          return false;
+        }
+      } catch {
+        return false;
+      }
+    }
+
+    async function handleSwitchRoom() {
+      const input = document.getElementById('switchRoomInput').value.trim();
+      if (!input || input.length !== 6) {
+        showToast('Vui lòng nhập đúng mã phòng gồm 6 chữ số!', 'error');
+        return;
+      }
+      const success = await loadRoomInfo(input);
+      if (success) {
+        socket.emit('room:join', { roomId: currentRoomId, role: 'controller' });
+        fetchState();
+        showToast('Đã chuyển sang phòng: ' + input, 'success');
+      } else {
+        showToast('Không tìm thấy phòng ' + input, 'error');
+      }
+    }
+
+    function copyToClipboard(text, msg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(msg || 'Đã sao chép vào bộ nhớ tạm!', 'success');
+        }).catch(() => {
+          showToast('Sao chép thất bại', 'error');
+        });
+      } else {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        showToast(msg || 'Đã sao chép vào bộ nhớ tạm!', 'success');
+      }
+    }
+
+    function copyRoomId() {
+      if (currentRoomId) {
+        copyToClipboard(currentRoomId, `Đã sao chép Mã phòng: ${currentRoomId}`);
+      }
+    }
+
+    function copyPlayerLink(slot) {
+      if (!currentRoomData || !currentRoomData.passwords) return;
+      const pass = getSlotPassword(currentRoomData.passwords, slot);
+      const fullUrl = `${window.location.origin}/Player${slot}.html?roomid=${encodeURIComponent(currentRoomId)}&auth=${encodeURIComponent(pass)}`;
+      copyToClipboard(fullUrl, `Đã sao chép link người chơi ${slot} (Pass: ${pass})`);
+    }
+
+    function copyInviteSummary() {
+      if (!currentRoomData) return;
+      const p1Pass = getSlotPassword(currentRoomData.passwords, 1);
+      const p2Pass = getSlotPassword(currentRoomData.passwords, 2);
+      const p3Pass = getSlotPassword(currentRoomData.passwords, 3);
+      const summary = `🎮 CHIẾC NÓN KỲ DIỆU 🎮\n` +
+        `Mã phòng: ${currentRoomId}\n` +
+        `--------------------\n` +
+        `🔴 Người chơi 1: Mật khẩu [${p1Pass}] | ${window.location.origin}/Player1.html?roomid=${currentRoomId}&auth=${p1Pass}\n` +
+        `🟡 Người chơi 2: Mật khẩu [${p2Pass}] | ${window.location.origin}/Player2.html?roomid=${currentRoomId}&auth=${p2Pass}\n` +
+        `🔵 Người chơi 3: Mật khẩu [${p3Pass}] | ${window.location.origin}/Player3.html?roomid=${currentRoomId}&auth=${p3Pass}\n` +
+        `--------------------\n` +
+        `🎤 Host: ${window.location.origin}/Host.html?roomid=${currentRoomId}\n` +
+        `🧩 Ô chữ: ${window.location.origin}/Puzzleboard.html?roomid=${currentRoomId}\n` +
+        `🎡 Nón: ${window.location.origin}/Wheel.html?roomid=${currentRoomId}`;
+      copyToClipboard(summary, 'Đã sao chép toàn bộ thông tin phòng!');
+    }
+
+    // Auto load or generate room on boot
+    (async function initRoom() {
+      if (currentRoomId) {
+        const loaded = await loadRoomInfo(currentRoomId);
+        if (!loaded) await generateNewRoom();
+      } else {
+        await generateNewRoom();
+      }
+    })();
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-amber-500', 'text-slate-950', 'border-amber-400', 'shadow');
+        btn.classList.add('bg-slate-900', 'text-slate-300', 'border-slate-800');
+      });
+      const targetTab = document.getElementById(tabId);
+      if (targetTab) targetTab.classList.remove('hidden');
+      const activeBtn = document.getElementById('btn_tab_' + tabId);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-900', 'text-slate-300', 'border-slate-800');
+        activeBtn.classList.add('bg-amber-500', 'text-slate-950', 'border-amber-400', 'shadow');
+      }
+    }
 
     // Zero Alert / Confirm Implementation
     function showToast(message, type = 'info') {
@@ -795,13 +1270,28 @@
       );
     }
 
+    // Soundboard Controller Command Trigger
+    function sendCmd(action, payload) {
+      if (action === 'PLAY_SOUNDBOARD') {
+        socket.emit('soundboard:play', payload);
+        showToast('Đã phát nhạc tới các màn hình: ' + payload, 'info');
+      } else if (action === 'STOP_SOUNDBOARD') {
+        socket.emit('soundboard:stop');
+        showToast('Đã dừng nhạc trên tất cả màn hình', 'info');
+      }
+    }
+
     // Socket Connection
     socket.on('connect', () => {
       document.getElementById('connectionStatus').innerHTML = `
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span>Đã kết nối</span>
       `;
-      socket.emit('state:request');
+      if (currentRoomId) {
+        socket.emit('room:join', { roomId: currentRoomId, role: 'controller' });
+      } else {
+        socket.emit('state:request');
+      }
     });
 
     socket.on('disconnect', () => {
@@ -816,16 +1306,20 @@
       updateUI(state);
     });
 
-    // Tự động tải trạng thái mới nhất ngay khi mở/F5/Reload
-    fetch('/api/state')
-      .then(res => res.json())
-      .then(state => {
-        if (state) {
-          localGameState = state;
-          updateUI(state);
-        }
-      })
-      .catch(() => {});
+    function fetchState() {
+      const url = currentRoomId
+        ? `/api/state?roomid=${encodeURIComponent(currentRoomId)}&role=controller`
+        : '/api/state?role=controller';
+      fetch(url)
+        .then(res => res.json())
+        .then(state => {
+          if (state) {
+            localGameState = state;
+            updateUI(state);
+          }
+        })
+        .catch(() => {});
+    }
 
     // UI Updates
     function updateUI(state) {
@@ -913,6 +1407,16 @@
 
       // Alphabet Keyboard
       renderAlphabet(state.puzzle.revealedLetters || []);
+
+      // Puzzle Sounds selection
+      if (state.puzzleSounds) {
+        ['showBlank', 'markLetter', 'openLetter', 'solvePuzzle'].forEach(k => {
+          const el = document.getElementById('puzzleSound_' + k);
+          if (el && state.puzzleSounds[k] && document.activeElement !== el) {
+            el.value = state.puzzleSounds[k];
+          }
+        });
+      }
 
       // Wheel Selection Highlight
       const activeWheel = state.wheel.selectedWheel || 'vong7.png';
@@ -1045,6 +1549,111 @@
 
       // Render rounds summary in card
       renderImportedRoundsSummary(state.roundsData || {});
+
+      // Spin Music Sync
+      if (state.spinMusic) {
+        const badge = document.getElementById('currentSpinMusicBadge');
+        if (badge) badge.innerText = state.spinMusic;
+        const radio = document.querySelector(`input[name="spinMusicChoice"][value="${state.spinMusic}"]`);
+        if (radio) radio.checked = true;
+      }
+
+      // Wheel Overlays Sync
+      renderOverlayGrid(state.wheelOverlays || {}, state.overlayAngles || {});
+    }
+
+    // Slice & Card Overlays (Ẩn/Hiện ô thẻ) Data
+    const sliceItems = [
+      { id: 'pn1_a', name: 'Ô Phần thưởng 1 (Kiểu 1)', file: 'Ô Phần thưởng 1.png', angles: [307.5], type: 'kieu1', imgW: 142, imgH: 298 },
+      { id: 'pn1_b', name: 'Ô Phần thưởng 2 (Kiểu 1)', file: 'Ô Phần thưởng 1.png', angles: [37.5, 142.5], type: 'kieu1', imgW: 142, imgH: 298 },
+      { id: 'bm1_1', name: 'Ô bí mật 1 (Kiểu 1)', file: 'Ô Bí Mật 1.png', angles: [37.5], type: 'kieu1', imgW: 143, imgH: 300 },
+      { id: 'bm2_1', name: 'Ô bí mật 2 (Kiểu 1)', file: 'Ô Bí Mật 1.png', angles: [217.5], type: 'kieu1', imgW: 143, imgH: 300 },
+      { id: 'st1', name: 'Ô Siêu tốc (Kiểu 1)', file: 'Ô Siêu Tốc 1.png', angles: [37.5], type: 'kieu1', imgW: 145, imgH: 302 },
+      { id: 'dd1', name: 'Ô Đổi điểm (Kiểu 1)', file: 'Ô Đổi điểm 1.png', angles: [37.5], type: 'kieu1', imgW: 145, imgH: 300 },
+      { id: 'o1000', name: 'Ô 1.000', file: 'Ô 1000.png', angles: [262.5], type: 'kieu1', imgW: 145, imgH: 302 },
+      { id: 'o2000', name: 'Ô 2.000', file: 'Ô 2000.png', angles: [232.5], type: 'kieu1', imgW: 145, imgH: 300 },
+      { id: 'o100k_1', name: 'Ô 100.000 (Kiểu 1)', file: 'Ô 100000 1.png', angles: [172.5], type: 'kieu1', imgW: 143, imgH: 297 },
+      { id: 'pn2', name: 'Ô Phần thưởng (Kiểu 2)', file: 'Ô Phần thưởng 2.png', angles: [172.5, 202.5], type: 'kieu2', imgW: 148, imgH: 524 },
+      { id: 'bm1_2', name: 'Ô bí mật 1 (Kiểu 2)', file: 'Ô Bí Mật 2.png', angles: [172.5, 202.5], type: 'kieu2', imgW: 146, imgH: 522 },
+      { id: 'bm2_2', name: 'Ô bí mật 2 (Kiểu 2)', file: 'Ô Bí Mật 2.png', angles: [262.5, 337.5], type: 'kieu2', imgW: 146, imgH: 522 },
+      { id: 'st2', name: 'Ô Siêu tốc (Kiểu 2)', file: 'Ô Siêu Tốc 2.png', angles: [172.5, 202.5], type: 'kieu2', imgW: 141, imgH: 518 },
+      { id: 'dd2', name: 'Ô Đổi điểm (Kiểu 2)', file: 'Ô Đổi điểm 2.png', angles: [172.5, 202.5], type: 'kieu2', imgW: 147, imgH: 520 },
+      { id: 'o3000', name: 'Ô 3.000', file: 'Ô 3000.png', angles: [37.5, 157.5], type: 'kieu2', imgW: 149, imgH: 524 },
+      { id: 'o4000', name: 'Ô 4.000', file: 'Ô 4000.png', angles: [37.5, 157.5], type: 'kieu2', imgW: 148, imgH: 519 },
+      { id: 'oqd', name: 'Ô Quy đổi', file: 'Ô Quy đổi.png', angles: [262.5, 337.5], type: 'kieu2', imgW: 149, imgH: 524 },
+      { id: 'o100k_2', name: 'Ô 100.000 (Kiểu 2)', file: 'Ô 100000 2.png', angles: [127.5, 142.5], type: 'kieu2', imgW: 153, imgH: 521 },
+      { id: 't_ch', name: 'Thẻ Cơ hội', file: 'Thẻ Cơ hội.png', angles: [7.5, 22.5, 82.5], type: 'card', imgW: 116, imgH: 151 },
+      { id: 't_qn', name: 'Thẻ Quyền năng', file: 'Thẻ Quyền năng.png', angles: [112.5, 277.5, 292.5], type: 'card', imgW: 155, imgH: 212 },
+    ];
+
+    function toggleOverlay(id) {
+      socket.emit('wheel:toggle_overlay', id);
+    }
+
+    function setAllOverlays(visible) {
+      socket.emit('wheel:set_all_overlays', visible);
+    }
+
+    function saveSpinMusicConfig() {
+      const selected = document.querySelector('input[name="spinMusicChoice"]:checked');
+      if (selected) {
+        socket.emit('wheel:set_spin_music', selected.value);
+        showToast('Đã lưu cấu hình nhạc quay Nón: ' + selected.value, 'success');
+      }
+    }
+
+    function sendCmd(cmd, param) {
+      if (cmd === 'PLAY_SOUNDBOARD') {
+        socket.emit('soundboard:play', param);
+        showToast('Phát nhạc soundboard: ' + param, 'info');
+      } else if (cmd === 'STOP_SOUNDBOARD') {
+        socket.emit('soundboard:stop');
+        showToast('Đã dừng nhạc soundboard', 'info');
+      } else {
+        socket.emit(cmd, param);
+      }
+    }
+
+    function setOverlayAngle(itemId, angle) {
+      socket.emit('wheel:set_overlay_angle', { itemId, angle: parseFloat(angle) });
+    }
+
+    function renderOverlayGrid(overlays = {}, overlayAngles = {}) {
+      const container = document.getElementById('overlayGrid');
+      if (!container) return;
+      container.innerHTML = sliceItems.map(item => {
+        const active = !!overlays[item.id];
+        const selectedAngle = (overlayAngles && overlayAngles[item.id] !== undefined) ? overlayAngles[item.id] : item.angles[0];
+
+        let angleSelectHtml = '';
+        if (item.angles.length > 1) {
+          angleSelectHtml = `
+            <div class="mt-1 w-full flex items-center justify-between gap-1 text-[10px]" onclick="event.stopPropagation()">
+              <span class="text-slate-400 font-medium">Góc đặt:</span>
+              <select onchange="setOverlayAngle('${item.id}', this.value)" class="bg-slate-900 border border-slate-700 text-amber-300 font-bold text-[10px] rounded px-1.5 py-0.5 focus:outline-none focus:border-amber-500">
+                ${item.angles.map(ang => `<option value="${ang}" ${Number(ang) === Number(selectedAngle) ? 'selected' : ''}>Góc ${ang}°</option>`).join('')}
+              </select>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="p-2.5 rounded-xl border flex flex-col justify-between gap-1.5 transition text-left ${
+            active 
+              ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200 shadow shadow-emerald-950' 
+              : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
+          }">
+            <div class="flex items-center justify-between w-full text-[11px] font-bold cursor-pointer" onclick="toggleOverlay('${item.id}')">
+              <span class="truncate max-w-[120px]">${item.name}</span>
+              <span class="${active ? 'text-emerald-400' : 'text-slate-500'} font-black">${active ? '✓' : '✕'}</span>
+            </div>
+            <div class="w-full h-10 rounded bg-slate-900/90 border border-slate-800 overflow-hidden flex items-center justify-center p-0.5 cursor-pointer" onclick="toggleOverlay('${item.id}')">
+              <img src="/${encodeURIComponent(item.file)}" alt="${item.name}" class="max-h-full max-w-full object-contain">
+            </div>
+            ${angleSelectHtml}
+          </div>
+        `;
+      }).join('');
     }
 
     function toggleCategoryVisibility() {
@@ -1057,34 +1666,61 @@
       showToast('Đã chuyển đổi trạng thái Ẩn/Hiện câu hỏi', 'info');
     }
 
+    // Helper formatting thousands with dots
+    function formatScoreInput(input) {
+      if (!input) return;
+      const cursorPosition = input.selectionStart;
+      const oldLength = input.value.length;
+      let val = input.value;
+      let isNegative = val.trim().startsWith('-');
+      let digits = val.replace(/\D/g, '');
+      if (!digits) {
+        input.value = isNegative ? '-' : '';
+        return;
+      }
+      let formatted = Number(digits).toLocaleString('vi-VN');
+      input.value = (isNegative ? '-' : '') + formatted;
+      const newLength = input.value.length;
+      if (cursorPosition !== null) {
+        const diff = newLength - oldLength;
+        const newPos = Math.max(0, cursorPosition + diff);
+        input.setSelectionRange(newPos, newPos);
+      }
+    }
+
+    function getScoreInputValue(id) {
+      const el = document.getElementById(id);
+      if (!el) return 0;
+      const raw = el.value.replace(/\./g, '').replace(/,/g, '').trim();
+      return Number(raw) || 0;
+    }
+
     // 3 Players Score Functions
     function setPlayer(id) {
       const name = document.getElementById(`p${id}_nameInput`).value;
-      const score = document.getElementById(`p${id}_scoreInput`).value;
+      const score = getScoreInputValue(`p${id}_scoreInput`);
       socket.emit('player:set', { playerId: id, name, roundScore: score });
       showToast(`Đã lưu thông tin Người chơi ${id}`, 'success');
     }
 
     function addRoundScore(id) {
-      const score = document.getElementById(`p${id}_scoreInput`).value;
-      const val = Number(score) || 0;
+      const val = getScoreInputValue(`p${id}_scoreInput`);
       if (val === 0) {
         showToast('Vui lòng nhập số điểm muốn cộng!', 'error');
         return;
       }
       socket.emit('player:add_round', { playerId: id, amount: val });
-      showToast(`Đã cộng +${val.toLocaleString()} vào điểm vòng P${id}`, 'success');
+      showToast(`Đã cộng +${val.toLocaleString('vi-VN')} vào điểm vòng P${id}`, 'success');
     }
 
     function subtractRoundScore(id) {
-      const score = document.getElementById(`p${id}_scoreInput`).value;
-      const val = Number(score) || 0;
+      const val = getScoreInputValue(`p${id}_scoreInput`);
       if (val === 0) {
         showToast('Vui lòng nhập số điểm muốn trừ!', 'error');
         return;
       }
       socket.emit('player:subtract_round', { playerId: id, amount: val });
-      showToast(`Đã trừ -${val.toLocaleString()} khỏi điểm vòng P${id}`, 'info');
+      showToast(`Đã trừ -${val.toLocaleString('vi-VN')} khỏi điểm vòng P${id}`, 'info');
     }
 
     function resetRoundScore(id) {
@@ -1098,7 +1734,7 @@
     }
 
     function setTotalScore(id) {
-      const total = document.getElementById(`p${id}_totalInput`).value;
+      const total = getScoreInputValue(`p${id}_totalInput`);
       socket.emit('player:set_total', { playerId: id, totalScore: total });
       showToast(`Đã set điểm tổng P${id}`, 'success');
     }
@@ -1283,6 +1919,15 @@
     }
 
     // Dò chữ cái, Mở lần 1 (Đánh dấu) và Mở lần 2 (Mở chữ)
+    function setPuzzleSound(key) {
+      const selectElem = document.getElementById('puzzleSound_' + key);
+      if (selectElem) {
+        const val = selectElem.value;
+        socket.emit('puzzle:set_sound', { key: key, value: val });
+        showToast('Đã lưu cấu hình âm thanh: ' + val, 'success');
+      }
+    }
+
     function removeToneMarks(str) {
       if (!str) return '';
       const toneMap = {

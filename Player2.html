@@ -6,6 +6,7 @@
   <title>Người Chơi 2 - Chiếc Nón Kỳ Diệu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/sounds.js"></script>
   <script src="/disableDevTools.js"></script>
   <style>
     :root {
@@ -148,12 +149,32 @@
 
   <script>
     const PLAYER_ID = 2;
+
+    // Check roomid and auth
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomid');
+    const auth = urlParams.get('auth');
+
+    if (!roomId || !auth) {
+      window.location.replace('/index.html');
+    }
+
+    // Set wheel iframe with roomid
+    const wheelIframe = document.querySelector('iframe');
+    if (wheelIframe && roomId) {
+      wheelIframe.src = `/Wheel.html?zoom=pointer&roomid=${encodeURIComponent(roomId)}`;
+    }
+
     const socket = io();
     let canSpin = false;
     let buzzerEnabled = false;
 
     socket.on('connect', () => {
-      socket.emit('state:request');
+      socket.emit('room:join', { roomId, role: 'player', slot: PLAYER_ID, auth });
+    });
+
+    socket.on('room:auth_failed', () => {
+      window.location.replace('/index.html');
     });
 
     socket.on('game:state', (state) => {
@@ -202,12 +223,14 @@
     });
 
     // Tự động đồng bộ trạng thái mới nhất ngay khi F5 / Reload / Vào muộn
-    fetch('/api/state')
-      .then(res => res.json())
-      .then(state => {
-        if (state) updatePlayerUI(state);
-      })
-      .catch(() => {});
+    if (roomId) {
+      fetch('/api/state?roomid=' + encodeURIComponent(roomId))
+        .then(res => res.json())
+        .then(state => {
+          if (state) updatePlayerUI(state);
+        })
+        .catch(() => {});
+    }
 
     function updatePlayerUI(state) {
       if (!state) return;

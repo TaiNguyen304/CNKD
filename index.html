@@ -1,262 +1,211 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hệ Thống Chiếc Nón Kỳ Diệu - 7 Màn Hình</title>
-    <meta name="description" content="Hệ thống 7 màn hình Chiếc Nón Kỳ Diệu gồm Controller, Host, Puzzleboard, Wheel và 3 màn hình người chơi với Socket.IO thời gian thực." />
-    <meta property="og:title" content="Hệ Thống Chiếc Nón Kỳ Diệu - 7 Màn Hình" />
-    <meta property="og:description" content="Hệ thống 7 màn hình Chiếc Nón Kỳ Diệu gồm Controller, Host, Puzzleboard, Wheel và 3 màn hình người chơi với Socket.IO thời gian thực." />
-    <meta property="og:type" content="website" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/disableDevTools.js"></script>
-    <style>
-      :root {
-        --blue: blue;
-        --aqua: aqua;
-        --yellow: yellow;
-        --green: green;
-        --red: red;
-        --pink: #ff00cc;
-        --purple: purple;
-        --lime: #39ff14;
-        --black: #000000;
-        --white: #ffffff;
-        --light-blue: aqua;
-        --dark-blue: blue;
-        --orange: orange;
-      }
-      * { font-weight: bold !important; }
-      body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
-      button:hover:not(:disabled),
-      .btn-action:hover:not(:disabled),
-      .btn:hover:not(:disabled),
-      a:hover,
-      input[type="button"]:hover:not(:disabled),
-      input[type="submit"]:hover:not(:disabled),
-      [role="button"]:hover {
-        background: orange !important;
-        background-color: orange !important;
-        color: #000000 !important;
-        border-color: orange !important;
-      }
-      button:hover:not(:disabled) *,
-      .btn-action:hover:not(:disabled) *,
-      .btn:hover:not(:disabled) *,
-      a:hover * {
-        color: #000000 !important;
-      }
-    </style>
-  </head>
-  <body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-8 flex flex-col justify-between">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chiếc Nón Kỳ Diệu - Đăng Nhập Người Chơi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/disableDevTools.js"></script>
+  <style>
+    * {
+      font-weight: bold !important;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at center, #0a2540 0%, #031120 70%, #01060d 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 16px;
+      user-select: none;
+    }
 
-    <!-- Top Navigation -->
-    <header class="max-w-7xl mx-auto w-full mb-8 border-b border-slate-800 pb-6">
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-3xl shadow-xl shadow-amber-500/20 text-slate-950 font-black">
-            CN
-          </div>
-          <div>
-            <h1 class="text-2xl md:text-3xl font-black text-white tracking-wide">
-              CHIẾC NÓN KỲ DIỆU
-            </h1>
-            <p class="text-sm text-slate-400">
-              Hệ thống 7 màn hình điều khiển và phát sóng Game Show đa điểm thời gian thực
-            </p>
-          </div>
-        </div>
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.92);
+      border: 3px solid #f59e0b;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.25);
+    }
 
-        <!-- Connection Badge -->
-        <div id="statusBadge" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>HỆ THỐNG ĐANG HOẠT ĐỘNG (PORT 3000)</span>
-        </div>
+    .input-field {
+      background: #0f172a;
+      border: 2px solid #334155;
+      color: #ffffff;
+      transition: all 0.2s;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+      background: #1e293b;
+    }
+
+    .btn-submit {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #020617;
+      box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.5);
+      transition: all 0.15s;
+    }
+    .btn-submit:hover:not(:disabled) {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 15px 25px -5px rgba(245, 158, 11, 0.6);
+    }
+    .btn-submit:active:not(:disabled) {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="w-full max-w-md glass-panel rounded-2xl p-6 sm:p-8 relative">
+    <!-- Header / Logo -->
+    <div class="text-center mb-6">
+      <div class="inline-block px-4 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs tracking-wider uppercase mb-2 rounded-full">
+        CHIẾC NÓN KỲ DIỆU
       </div>
-    </header>
+      <h1 class="text-2xl sm:text-3xl text-amber-400 uppercase tracking-tight">
+        Đăng Nhập Người Chơi
+      </h1>
+      <p class="text-xs text-slate-400 mt-1">
+        Vui lòng chọn vị trí và nhập đúng mã phòng cùng mật khẩu
+      </p>
+    </div>
 
-    <!-- Main Content: Grid of 7 Web Pages -->
-    <main class="max-w-7xl mx-auto w-full space-y-8 my-auto">
+    <!-- Error / Toast Banner (Zero alert/prompt/confirm) -->
+    <div id="errorBanner" class="hidden mb-5 p-3.5 bg-rose-950/80 border-2 border-rose-600 rounded-xl text-rose-200 text-xs flex items-center justify-between gap-2 shadow-lg">
+      <div class="flex items-center gap-2">
+        <span class="text-rose-400 text-base">⚠️</span>
+        <span id="errorMessage">Thông tin đăng nhập không chính xác</span>
+      </div>
+      <button type="button" onclick="hideError()" class="text-rose-400 hover:text-rose-200 text-sm p-1">✕</button>
+    </div>
 
+    <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+      <!-- Ô thứ nhất: Chọn vị trí từ 1 - 3 -->
       <div>
-        <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
-          TRUY CẬP 7 MÀN HÌNH CHÍNH
-        </h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-          <!-- 1. Controller -->
-          <a href="/Controller.html" class="group p-5 rounded-2xl bg-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 hover:bg-slate-900 transition-all duration-200 shadow-xl flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <span class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-black">
-                  CTRL
-                </span>
-                <span class="text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">Controller.html</span>
-              </div>
-              <h3 class="text-lg font-black text-white group-hover:text-black transition">BÀN ĐIỀU KHIỂN</h3>
-              <p class="text-xs text-slate-400 mt-1">
-                Điểm số 3 người chơi, nhập đề Excel, chọn 11 vòng chơi, điều khiển ô chữ, mở quay nón.
-              </p>
-            </div>
-            <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-indigo-400 flex items-center gap-1">
-              <span>Mở Controller</span>
-            </div>
-          </a>
-
-          <!-- 2. Host -->
-          <a href="/Host.html" class="group p-5 rounded-2xl bg-slate-900/90 border border-purple-500/30 hover:border-purple-400 hover:bg-slate-900 transition-all duration-200 shadow-xl flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <span class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-black">
-                  MC
-                </span>
-                <span class="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">Host.html</span>
-              </div>
-              <h3 class="text-lg font-black text-white group-hover:text-black transition">MÀN HÌNH MC / HOST</h3>
-              <p class="text-xs text-slate-400 mt-1">
-                Xem toàn bộ đáp án ẩn/hiện, gợi ý kịch bản, cảnh báo chuông bấm, theo dõi nón và chữ đã gọi.
-              </p>
-            </div>
-            <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-purple-400 flex items-center gap-1">
-              <span>Mở Host</span>
-            </div>
-          </a>
-
-          <!-- 3. Puzzleboard -->
-          <a href="/Puzzleboard.html" class="group p-5 rounded-2xl bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400 hover:bg-slate-900 transition-all duration-200 shadow-xl flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <span class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-black">
-                  O-CHU
-                </span>
-                <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">Puzzleboard.html</span>
-              </div>
-              <h3 class="text-lg font-black text-white group-hover:text-black transition">BẢNG Ô CHỮ SÂN KHẤU</h3>
-              <p class="text-xs text-slate-400 mt-1">
-                Bảng ma trận 4 hàng chuẩn truyền hình, hiệu ứng lật thẻ 3D, hiện chủ đề, gợi ý và pháo hoa giải đố.
-              </p>
-            </div>
-            <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-emerald-400 flex items-center gap-1">
-              <span>Mở Bảng Ô Chữ</span>
-            </div>
-          </a>
-
-          <!-- 4. Wheel -->
-          <a href="/Wheel.html" class="group p-5 rounded-2xl bg-slate-900/90 border border-amber-500/30 hover:border-amber-400 hover:bg-slate-900 transition-all duration-200 shadow-xl flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <span class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-black">
-                  NON
-                </span>
-                <span class="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">Wheel.html</span>
-              </div>
-              <h3 class="text-lg font-black text-white group-hover:text-black transition">CHIẾC NÓN KỲ DIỆU</h3>
-              <p class="text-xs text-slate-400 mt-1">
-                Vòng quay 24 ô chuẩn cơ học với hiệu ứng âm thanh bánh cóc, kim gạt va chạm và tính toán kết quả chuẩn xác.
-              </p>
-            </div>
-            <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-amber-400 flex items-center gap-1">
-              <span>Mở Chiếc Nón</span>
-            </div>
-          </a>
-
-        </div>
-
-        <!-- Row 2: 3 Players -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-
-          <!-- Player 1 -->
-          <a href="/Player1.html" class="group p-5 rounded-2xl bg-slate-900/90 border border-red-500/30 hover:border-red-400 hover:bg-slate-900 transition shadow-xl flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="w-8 h-8 rounded-lg bg-red-600 text-white font-black flex items-center justify-center text-sm shadow">1</span>
-                <h3 class="font-extrabold text-white group-hover:text-black">NGƯỜI CHƠI 1</h3>
-              </div>
-              <span class="text-xs text-red-400 font-mono">Player1.html</span>
-            </div>
-            <p class="text-xs text-slate-400">
-              Bục thi đấu Người chơi 1: Nút bấm chuông giành quyền, nút quay nón khi được mở quyền, điểm vòng & điểm tổng.
-            </p>
-            <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-red-400 flex items-center gap-1">
-              <span>Mở Người chơi 1</span>
-            </div>
-          </a>
-
-          <!-- Player 2 -->
-          <a href="/Player2.html" class="group p-5 rounded-2xl bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400 hover:bg-slate-900 transition shadow-xl flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="w-8 h-8 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-sm shadow">2</span>
-                <h3 class="font-extrabold text-white group-hover:text-black">NGƯỜI CHƠI 2</h3>
-              </div>
-              <span class="text-xs text-emerald-400 font-mono">Player2.html</span>
-            </div>
-            <p class="text-xs text-slate-400">
-              Bục thi đấu Người chơi 2: Nút bấm chuông giành quyền, nút quay nón khi được mở quyền, điểm vòng & điểm tổng.
-            </p>
-            <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-emerald-400 flex items-center gap-1">
-              <span>Mở Người chơi 2</span>
-            </div>
-          </a>
-
-          <!-- Player 3 -->
-          <a href="/Player3.html" class="group p-5 rounded-2xl bg-slate-900/90 border border-blue-500/30 hover:border-blue-400 hover:bg-slate-900 transition shadow-xl flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="w-8 h-8 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow">3</span>
-                <h3 class="font-extrabold text-white group-hover:text-black">NGƯỜI CHƠI 3</h3>
-              </div>
-              <span class="text-xs text-blue-400 font-mono">Player3.html</span>
-            </div>
-            <p class="text-xs text-slate-400">
-              Bục thi đấu Người chơi 3: Nút bấm chuông giành quyền, nút quay nón khi được mở quyền, điểm vòng & điểm tổng.
-            </p>
-            <div class="mt-4 pt-3 border-t border-slate-800 text-xs font-bold text-blue-400 flex items-center gap-1">
-              <span>Mở Người chơi 3</span>
-            </div>
-          </a>
-
+        <label for="playerSlot" class="block text-xs uppercase tracking-wider text-slate-300 mb-1.5">
+          1. Vị trí người chơi (1 - 3)
+        </label>
+        <div class="relative">
+          <select id="playerSlot" required class="input-field w-full px-4 py-3 rounded-xl text-sm appearance-none cursor-pointer">
+            <option value="" disabled selected>-- Chọn vị trí người chơi --</option>
+            <option value="1">Vị trí 1 (Người chơi 1 - Đỏ)</option>
+            <option value="2">Vị trí 2 (Người chơi 2 - Vàng)</option>
+            <option value="3">Vị trí 3 (Người chơi 3 - Xanh)</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+            ▼
+          </div>
         </div>
       </div>
 
-      <!-- Deployment and Multi-View Split Screen Preview -->
-      <section class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
-          <div>
-            <h3 class="text-base font-bold text-white flex items-center gap-2">
-              TRIỂN KHAI RENDER (NODEJS / SERVER.JS)
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">Dự án được viết hoàn toàn bằng NodeJS nguyên bản (<code class="text-amber-300">server.js</code>), không dùng Typescript theo đúng yêu cầu.</p>
-          </div>
-          <div class="text-xs text-slate-300 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 font-mono">
-            Start Command: <span class="text-emerald-400 font-bold">npm start</span> hoặc <span class="text-emerald-400 font-bold">node server.js</span>
-          </div>
-        </div>
+      <!-- Ô thứ hai: Nhập mã phòng (6 chữ số) -->
+      <div>
+        <label for="roomIdInput" class="block text-xs uppercase tracking-wider text-slate-300 mb-1.5">
+          2. Mã phòng (6 chữ số)
+        </label>
+        <input
+          type="text"
+          id="roomIdInput"
+          name="roomId"
+          required
+          maxlength="6"
+          pattern="[0-9]{6}"
+          inputmode="numeric"
+          placeholder="Ví dụ: 849201"
+          class="input-field w-full px-4 py-3 rounded-xl text-sm tracking-widest placeholder:text-slate-500 font-mono"
+        />
+      </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-400">
-          <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-            <span class="font-bold text-slate-200 block mb-1">1. Đẩy lên Github / Render</span>
-            Kết nối repository của bạn với Render.com (chọn Web Service).
-          </div>
-          <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-            <span class="font-bold text-slate-200 block mb-1">2. Cấu hình Runtime</span>
-            Môi trường: <strong class="text-amber-300">Node</strong>. Build Command: <strong class="text-amber-300">npm install</strong>.
-          </div>
-          <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-            <span class="font-bold text-slate-200 block mb-1">3. Lệnh khởi chạy</span>
-            Start Command: <strong class="text-emerald-400">node server.js</strong> (tự động nhận PORT của Render).
-          </div>
-        </div>
-      </section>
+      <!-- Ô thứ ba: Nhập mật khẩu (4 chữ số) -->
+      <div>
+        <label for="authPassInput" class="block text-xs uppercase tracking-wider text-slate-300 mb-1.5">
+          3. Mật khẩu (4 chữ số)
+        </label>
+        <input
+          type="password"
+          id="authPassInput"
+          name="auth"
+          required
+          maxlength="4"
+          pattern="[0-9]{4}"
+          inputmode="numeric"
+          placeholder="Ví dụ: 1234"
+          class="input-field w-full px-4 py-3 rounded-xl text-sm tracking-widest placeholder:text-slate-500 font-mono"
+        />
+      </div>
 
-    </main>
+      <!-- Nút Xác nhận -->
+      <div class="pt-2">
+        <button
+          type="submit"
+          id="submitBtn"
+          class="btn-submit w-full py-3.5 px-6 rounded-xl text-base uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2"
+        >
+          <span id="btnText">Xác nhận</span>
+        </button>
+      </div>
+    </form>
+  </div>
 
-    <!-- Footer -->
-    <footer class="max-w-7xl mx-auto w-full mt-8 pt-4 border-t border-slate-800 text-center text-xs text-slate-500">
-      Chiếc Nón Kỳ Diệu Game Show Engine © 2026 • 7 Màn Hình Đồng Bộ Thời Gian Thực Socket.IO
-    </footer>
+  <script>
+    function showError(msg) {
+      const banner = document.getElementById('errorBanner');
+      const text = document.getElementById('errorMessage');
+      text.innerText = msg;
+      banner.classList.remove('hidden');
+    }
 
-  </body>
+    function hideError() {
+      document.getElementById('errorBanner').classList.add('hidden');
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      hideError();
+
+      const slot = document.getElementById('playerSlot').value;
+      const roomId = document.getElementById('roomIdInput').value.trim();
+      const auth = document.getElementById('authPassInput').value.trim();
+
+      if (!slot || !roomId || !auth) {
+        showError('Vui lòng điền đầy đủ cả 3 thông tin!');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      submitBtn.disabled = true;
+      btnText.innerText = 'Đang kiểm tra...';
+
+      try {
+        const response = await fetch('/api/room/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId, slot: Number(slot), auth })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Đúng vị trí, đúng mã phòng và đúng mật khẩu
+          btnText.innerText = 'Đang chuyển hướng...';
+          const targetUrl = `/Player${slot}.html?roomid=${encodeURIComponent(roomId)}&auth=${encodeURIComponent(auth)}`;
+          window.location.href = targetUrl;
+        } else {
+          showError(data.message || 'Mã phòng hoặc mật khẩu không chính xác!');
+          submitBtn.disabled = false;
+          btnText.innerText = 'Xác nhận';
+        }
+      } catch (err) {
+        showError('Không thể kết nối đến máy chủ. Vui lòng thử lại!');
+        submitBtn.disabled = false;
+        btnText.innerText = 'Xác nhận';
+      }
+    }
+  </script>
+</body>
 </html>
