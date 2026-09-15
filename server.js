@@ -454,10 +454,29 @@ io.on('connection', (socket) => {
     }
   });
 
+  // NTP Time Synchronization for zero-latency cross-client audio sync
+  socket.on('timesync:ping', (data = {}) => {
+    socket.emit('timesync:pong', {
+      t0: data.t0 || 0,
+      serverTime: Date.now()
+    });
+  });
+
   // Helper to get socket's room
   function currentRoom() {
     const roomId = socket.data.roomId;
     return getRoom(roomId);
+  }
+
+  // Helper to broadcast synchronized sound event with timestamp scheduling
+  function broadcastSound(room, eventName, payload) {
+    if (!room || !room.id) return;
+    const serverTime = Date.now();
+    const playAt = serverTime + 60; // 60ms sync horizon for zero-lag alignment
+    const fullPayload = (typeof payload === 'object' && payload !== null)
+      ? { ...payload, serverTime, playAt }
+      : { file: payload, serverTime, playAt };
+    io.to(room.id).emit(eventName, fullPayload);
   }
 
   // Room creation / update from Controller
@@ -593,12 +612,12 @@ io.on('connection', (socket) => {
 
       const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.showBlank) || 'reveal.mp3';
       if (soundFile && soundFile !== 'None') {
-        io.to(room.id).emit('sound:play', { type: 'puzzle_show', sound: soundFile });
+        broadcastSound(room, 'sound:play', { type: 'puzzle_show', sound: soundFile });
       }
     }
 
     broadcastRoomState(room.id);
-    io.to(room.id).emit('sound:play', { type: 'round_change', round: roundName });
+    broadcastSound(room, 'sound:play', { type: 'round_change', round: roundName });
   });
 
   // Choice 1: "Ô chữ cố định"
@@ -739,23 +758,23 @@ io.on('connection', (socket) => {
       }
     }, duration + 300);
 
-    io.to(room.id).emit('wheel:start_spin', {
+    const spinMusic = room.gameState.spinMusic || 'Nhạc quay Nón 1.mp3';
+    broadcastSound(room, 'wheel:start_spin', {
       startAngle: room.gameState.wheel.startAngle,
       finalAngle: room.gameState.wheel.finalAngle,
       duration,
       startTime,
       spinner: room.gameState.wheel.activeSpinner,
       selectedWheel: room.gameState.wheel.selectedWheel,
-      music: room.gameState.spinMusic || 'Nhạc quay Nón 1.mp3'
+      music: spinMusic
     });
     broadcastRoomState(room.id);
-    io.to(room.id).emit('sound:play', { type: 'spin_start', duration, music: room.gameState.spinMusic || 'Nhạc quay Nón 1.mp3' });
   });
 
   // Soundboard broadcast handlers (scoped to room)
   socket.on('soundboard:play', (file) => {
     const room = currentRoom();
-    if (room) io.to(room.id).emit('soundboard:play_file', file);
+    if (room) broadcastSound(room, 'soundboard:play_file', { file });
   });
   socket.on('soundboard:stop', () => {
     const room = currentRoom();
@@ -763,7 +782,7 @@ io.on('connection', (socket) => {
   });
   socket.on('PLAY_SOUNDBOARD', (file) => {
     const room = currentRoom();
-    if (room) io.to(room.id).emit('soundboard:play_file', file);
+    if (room) broadcastSound(room, 'soundboard:play_file', { file });
   });
   socket.on('STOP_SOUNDBOARD', () => {
     const room = currentRoom();
@@ -836,7 +855,7 @@ io.on('connection', (socket) => {
       room.gameState.wheel.lockedAll = true;
       room.gameState.wheel.activeSpinner = null;
       broadcastRoomState(room.id);
-      io.to(room.id).emit('sound:play', { type: 'wheel_result', result });
+      broadcastSound(room, 'sound:play', { type: 'wheel_result', result });
     }
   });
 
@@ -855,7 +874,7 @@ io.on('connection', (socket) => {
     });
     broadcastRoomState(room.id);
     io.to(room.id).emit('player:spin_enabled', { playerId: targetId });
-    io.to(room.id).emit('sound:play', { type: 'turn_granted', playerId: targetId });
+    broadcastSound(room, 'sound:play', { type: 'turn_granted', playerId: targetId });
   });
 
   socket.on('wheel:lock_all', () => {
@@ -938,7 +957,7 @@ io.on('connection', (socket) => {
 
     const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.solvePuzzle) || 'ClearPuzzle.mp3';
     if (soundFile && soundFile !== 'None') {
-      io.to(room.id).emit('sound:play', { type: 'puzzle_solve', sound: soundFile });
+      broadcastSound(room, 'sound:play', { type: 'puzzle_solve', sound: soundFile });
     }
   });
 
@@ -1049,7 +1068,7 @@ io.on('connection', (socket) => {
 
     const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.markLetter) || 'ding.wav';
     if (soundFile && soundFile !== 'None') {
-      io.to(room.id).emit('sound:play', { type: 'letter_mark', sound: soundFile });
+      broadcastSound(room, 'sound:play', { type: 'letter_mark', sound: soundFile });
     }
   });
 
@@ -1072,7 +1091,7 @@ io.on('connection', (socket) => {
 
       const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.openLetter) || '2nd_ding.wav';
       if (soundFile && soundFile !== 'None') {
-        io.to(room.id).emit('sound:play', { type: 'letter_open', sound: soundFile });
+        broadcastSound(room, 'sound:play', { type: 'letter_open', sound: soundFile });
       }
     }
   });
@@ -1128,7 +1147,7 @@ io.on('connection', (socket) => {
       const nextIndex = unrevealed[randomIndex];
       room.gameState.puzzle.revealedIndices.push(nextIndex);
       broadcastRoomState(room.id);
-      io.to(room.id).emit('sound:play', { type: 'letter_flip' });
+      broadcastSound(room, 'sound:play', { type: 'letter_flip' });
     }, intervalMs);
 
     broadcastRoomState(room.id);
@@ -1182,7 +1201,7 @@ io.on('connection', (socket) => {
       const nextIndex = unrevealed[randomIndex];
       room.gameState.puzzle.revealedIndices.push(nextIndex);
       broadcastRoomState(room.id);
-      io.to(room.id).emit('sound:play', { type: 'letter_flip' });
+      broadcastSound(room, 'sound:play', { type: 'letter_flip' });
     }, room.gameState.revealProgress.intervalMs || 800);
 
     broadcastRoomState(room.id);
@@ -1210,7 +1229,7 @@ io.on('connection', (socket) => {
       }
 
       broadcastRoomState(room.id);
-      io.to(room.id).emit('sound:play', { type: 'buzzer_hit', player });
+      broadcastSound(room, 'sound:play', { type: 'buzzer_hit', player });
     }
   });
 
