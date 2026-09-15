@@ -874,7 +874,6 @@ io.on('connection', (socket) => {
     });
     broadcastRoomState(room.id);
     io.to(room.id).emit('player:spin_enabled', { playerId: targetId });
-    broadcastSound(room, 'sound:play', { type: 'turn_granted', playerId: targetId });
   });
 
   socket.on('wheel:lock_all', () => {
