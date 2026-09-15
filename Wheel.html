@@ -137,7 +137,15 @@
     const ctx = canvas.getContext('2d');
 
     const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get('roomid');
+    let roomId = urlParams.get('roomid');
+    const isIframe = window.self !== window.top;
+
+    if (!roomId && isIframe) {
+      try {
+        const parentParams = new URLSearchParams(window.parent.location.search);
+        roomId = parentParams.get('roomid');
+      } catch (e) {}
+    }
 
     function submitRoomFromOverlay() {
       const input = document.getElementById('overlayRoomInput').value.trim();
@@ -146,8 +154,10 @@
       }
     }
 
-    if (!roomId) {
+    if (!roomId && !isIframe) {
       document.getElementById('missingRoomOverlay').classList.remove('hidden');
+    } else {
+      document.getElementById('missingRoomOverlay').classList.add('hidden');
     }
     
     // 3 Pointers Elements

@@ -242,9 +242,17 @@
   <script>
     const socket = io();
 
-    // Check roomid in URL
+    // Check roomid in URL or parent frame
     const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get('roomid');
+    let roomId = urlParams.get('roomid');
+    const isIframe = window.self !== window.top;
+
+    if (!roomId && isIframe) {
+      try {
+        const parentParams = new URLSearchParams(window.parent.location.search);
+        roomId = parentParams.get('roomid');
+      } catch (e) {}
+    }
 
     function submitRoomFromOverlay() {
       const input = document.getElementById('overlayRoomInput').value.trim();
@@ -253,8 +261,10 @@
       }
     }
 
-    if (!roomId) {
+    if (!roomId && !isIframe) {
       document.getElementById('missingRoomOverlay').classList.remove('hidden');
+    } else {
+      document.getElementById('missingRoomOverlay').classList.add('hidden');
     }
 
     // STRICT SPECIFICATION: Ô CHỮ CÓ 4 HÀNG, MỖI HÀNG 16 Ô (4 x 16 = 64 Ô)

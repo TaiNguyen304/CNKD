@@ -62,7 +62,7 @@
         <span class="text-slate-400 lowercase font-mono">/Puzzleboard.html</span>
       </div>
       <div class="flex-1 min-h-0 w-full h-full rounded-lg overflow-hidden bg-black border border-slate-800 relative">
-        <iframe src="/Puzzleboard.html" scrolling="no" class="w-full h-full border-0 pointer-events-none select-none block overflow-hidden" title="Puzzleboard Preview"></iframe>
+        <iframe id="puzzleboardIframe" src="/Puzzleboard.html" scrolling="no" class="w-full h-full border-0 pointer-events-none select-none block overflow-hidden" title="Puzzleboard Preview"></iframe>
       </div>
     </div>
 
@@ -73,7 +73,7 @@
         <span class="text-amber-300 font-mono text-[11px]" id="hostActiveWheel">vong7.png</span>
       </div>
       <div class="flex-1 min-h-0 w-full h-full rounded-lg overflow-hidden bg-black border border-slate-800 relative">
-        <iframe src="/Wheel.html?zoom=pointer" scrolling="no" class="w-full h-full border-0 pointer-events-none select-none block overflow-hidden" title="Wheel Preview"></iframe>
+        <iframe id="wheelIframe" src="/Wheel.html?zoom=pointer" scrolling="no" class="w-full h-full border-0 pointer-events-none select-none block overflow-hidden" title="Wheel Preview"></iframe>
       </div>
     </div>
   </section>
@@ -232,6 +232,14 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('roomid');
+
+    // Update child iframes with roomId
+    if (roomId) {
+      const pIframe = document.getElementById('puzzleboardIframe');
+      if (pIframe) pIframe.src = `/Puzzleboard.html?roomid=${encodeURIComponent(roomId)}`;
+      const wIframe = document.getElementById('wheelIframe');
+      if (wIframe) wIframe.src = `/Wheel.html?roomid=${encodeURIComponent(roomId)}&zoom=pointer`;
+    }
 
     function submitRoomFromOverlay() {
       const input = document.getElementById('overlayRoomInput').value.trim();
