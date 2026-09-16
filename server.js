@@ -1113,6 +1113,15 @@ io.on('connection', (socket) => {
     room.gameState.revealProgress.intervalMs = intervalMs;
     room.gameState.puzzle.borderColor = '#800080';
 
+    // Bổ sung: Mở chuông cho cả 3 người chơi, xóa trạng thái đã bấm chuông trước đó
+    room.gameState.buzzer.enabled = true;
+    room.gameState.buzzer.winner = null;
+    room.gameState.buzzer.timestamp = null;
+    room.gameState.players.forEach(p => {
+      p.buzzed = false;
+      p.buzzTime = null;
+    });
+
     room.revealIntervalTimer = setInterval(() => {
       let unrevealed = [];
       if (room.gameState.puzzle.gridMatrix && Array.isArray(room.gameState.puzzle.gridMatrix)) {
@@ -1168,6 +1177,15 @@ io.on('connection', (socket) => {
     room.gameState.revealProgress.active = true;
     room.gameState.puzzle.borderColor = '#800080';
 
+    // Nút tiếp tục hiện: Khung bảng và 3 ô điểm trên Puzzleboard trở về màu tím, chuông của cả 3 người chơi được mở lại
+    room.gameState.buzzer.enabled = true;
+    room.gameState.buzzer.winner = null;
+    room.gameState.buzzer.timestamp = null;
+    room.gameState.players.forEach(p => {
+      p.buzzed = false;
+      p.buzzTime = null;
+    });
+
     room.revealIntervalTimer = setInterval(() => {
       let unrevealed = [];
       if (room.gameState.puzzle.gridMatrix && Array.isArray(room.gameState.puzzle.gridMatrix)) {
@@ -1201,7 +1219,7 @@ io.on('connection', (socket) => {
       room.gameState.puzzle.revealedIndices.push(nextIndex);
       broadcastRoomState(room.id);
       broadcastSound(room, 'sound:play', { type: 'letter_flip' });
-    }, room.gameState.revealProgress.intervalMs || 800);
+    }, room.gameState.revealProgress.intervalMs || 1500);
 
     broadcastRoomState(room.id);
   });
