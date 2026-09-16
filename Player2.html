@@ -191,7 +191,7 @@
         if (spinBtn) {
           spinBtn.disabled = false;
           spinBtn.innerText = 'Quay';
-          spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-950 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 border-4 border-yellow-200 shadow-2xl hover:brightness-110 active:scale-[0.98] transition cursor-pointer select-none';
+          spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-950 bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-500 border-4 border-yellow-100 shadow-2xl hover:brightness-110 active:scale-[0.98] transition cursor-pointer select-none';
         }
       } else {
         canSpin = false;
@@ -220,7 +220,7 @@
       if (spinBtn) {
         spinBtn.disabled = true;
         spinBtn.innerText = 'Quay';
-        spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-amber-100 bg-gradient-to-br from-amber-600 to-yellow-700 border-4 border-amber-400 shadow-2xl cursor-wait select-none';
+        spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-purple-100 bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 border-4 border-purple-300 shadow-2xl cursor-wait select-none';
       }
     });
 
@@ -249,10 +249,10 @@
           spinBtn.innerText = 'Quay';
           if (state.wheel.spinning) {
             spinBtn.disabled = true;
-            spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-amber-100 bg-gradient-to-br from-amber-600 to-yellow-700 border-4 border-amber-400 shadow-2xl cursor-wait select-none';
+            spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-purple-100 bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 border-4 border-purple-300 shadow-2xl cursor-wait select-none';
           } else if (canSpin) {
             spinBtn.disabled = false;
-            spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-950 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 border-4 border-yellow-200 shadow-2xl hover:brightness-110 active:scale-[0.98] transition cursor-pointer select-none';
+            spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-950 bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-500 border-4 border-yellow-100 shadow-2xl hover:brightness-110 active:scale-[0.98] transition cursor-pointer select-none';
           } else {
             spinBtn.disabled = true;
             spinBtn.className = 'md:col-span-4 h-full w-full rounded-xl flex items-center justify-center font-black text-4xl sm:text-5xl md:text-6xl text-slate-500 bg-slate-800 border-4 border-slate-700 shadow-xl transition cursor-not-allowed select-none';
