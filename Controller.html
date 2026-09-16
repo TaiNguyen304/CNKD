@@ -101,7 +101,7 @@
           </div>
           <div>
             <h2 class="text-base sm:text-lg font-black text-white" id="modalRoundName">BẮT ĐẦU VÒNG CHƠI</h2>
-            <p class="text-[11px] text-amber-300/80">Lựa chọn phương thức mở ô chữ trên sân khấu</p>
+            <p class="text-[11px] text-amber-300/80">Lựa chọn cơ chế</p>
           </div>
         </div>
         <button onclick="closeRoundSelectionModal()" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs">
@@ -118,12 +118,10 @@
               1
             </div>
             <h3 class="text-sm font-black text-white group-hover:text-blue-300">Ô CHỮ CỐ ĐỊNH</h3>
-            <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
-              Mở trực tiếp ô chữ cố định của vòng này. Ô chữ trống sẽ lập tức hiện ra trên Puzzleboard.
-            </p>
+            
           </div>
           <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] font-bold text-blue-400 flex items-center gap-1">
-            <span>Chọn Ô Chữ Cố Định</span>
+            <span>Chọn</span>
           </div>
         </button>
 
@@ -134,9 +132,7 @@
               3
             </div>
             <h3 class="text-sm font-black text-white group-hover:text-amber-300">CHỌN 1 TRONG 3 CHỦ ĐỀ</h3>
-            <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
-              Xuất hiện 3 chủ đề cho người chơi chọn. Sau khi người chơi chọn xong, ô chữ mới hiện ra.
-            </p>
+            
           </div>
           <div class="mt-3 pt-2 border-t border-slate-800 text-[11px] font-bold text-amber-400 flex items-center gap-1">
             <span>Chọn 1 trong 3 chủ đề</span>
@@ -148,7 +144,7 @@
       <div id="modalStep2Topics" class="hidden space-y-3">
         <div class="flex items-center justify-between">
           <span class="text-xs text-amber-300 uppercase tracking-wider font-extrabold">
-            BẤM CHỌN 1 TRONG 3 CHỦ ĐỀ ĐỂ MỞ Ô CHỮ:
+            CHỌN 1 TRONG 3 CHỦ ĐỀ:
           </span>
           <button onclick="backToModalStep1()" class="text-xs text-slate-400 hover:text-white underline">
             Quay lại
@@ -159,9 +155,7 @@
           <!-- Dynamically populated 3 topics -->
         </div>
 
-        <p class="text-[10px] text-slate-400 text-center italic">
-          * Theo quy tắc: Khi bấm chọn một trong ba chủ đề trên, ô chữ trống của chủ đề đó mới chính thức xuất hiện trên sân khấu.
-        </p>
+        
       </div>
     </div>
   </div>
@@ -170,10 +164,7 @@
   <header class="max-w-[1536px] mx-auto mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
     <div class="flex items-center gap-2">
       <div>
-        <h1 class="text-base sm:text-lg font-black text-white tracking-wide flex items-center gap-1.5">
-          CONTROLLER <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">BÀN ĐIỀU KHIỂN TRUNG TÂM</span>
-        </h1>
-        <p class="text-[10px] text-slate-400">Chiếc Nón Kỳ Diệu - 7 Màn hình thời gian thực</p>
+        
       </div>
     </div>
 
@@ -210,7 +201,7 @@
     <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 sm:p-2 shadow-md shrink-0">
       <div class="flex items-center justify-between mb-1 pb-0.5 border-b border-slate-800">
         <h2 class="text-[11px] sm:text-xs font-bold text-slate-200 flex items-center gap-1.5">
-          <span>BẢNG ĐIỀU KHIỂN ĐIỂM SỐ 3 NGƯỜI CHƠI</span>
+          <span>QUẢN LÝ ĐIỂM SỐ</span>
         </h2>
         <span class="text-[10px] text-slate-400 hidden md:inline">Tên | Điểm vòng (+, -, Reset, x2, /2) | Điểm tổng (Set tổng, Thêm tổng)</span>
       </div>
@@ -293,19 +284,19 @@
     <!-- THANH TAB CHUYỂN MÀN HÌNH ĐIỀU KHIỂN -->
     <div class="flex items-center gap-1 border-b border-slate-800 pb-0.5 shrink-0 overflow-x-auto">
       <button id="btn_tab_tabRoom" onclick="switchTab('tabRoom')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
-        <span>🏠 MÃ PHÒNG & MẬT KHẨU</span>
+        <span>MÃ PHÒNG & MẬT KHẨU</span>
       </button>
       <button id="btn_tab_tabPuzzle" onclick="switchTab('tabPuzzle')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-amber-500 text-slate-950 border border-amber-400 shadow transition flex items-center gap-1 whitespace-nowrap">
-        <span>🧩 ĐIỀU KHIỂN Ô CHỮ & ĐỀ THI</span>
+        <span>ĐIỀU KHIỂN Ô CHỮ & ĐỀ THI</span>
       </button>
       <button id="btn_tab_tabWheel" onclick="switchTab('tabWheel')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
-        <span>🎡 VÒNG CHƠI & NÓN</span>
+        <span>VÒNG CHƠI & NÓN</span>
       </button>
       <button id="btn_tab_tabSound" onclick="switchTab('tabSound')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
-        <span>🎵 SOUNDBOARD (32+ NHẠC)</span>
+        <span>SOUNDBOARD</span>
       </button>
       <button id="btn_tab_tabBuzzer" onclick="switchTab('tabBuzzer')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
-        <span>🔔 CHUÔNG & HỆ THỐNG</span>
+        <span>CHUÔNG & HỆ THỐNG</span>
       </button>
     </div>
 
@@ -318,13 +309,12 @@
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
             <div>
               <h2 class="text-sm sm:text-base font-black text-amber-400 flex items-center gap-2">
-                <span>🏠 QUẢN LÝ MÃ PHÒNG & MẬT KHẨU NGƯỜI CHƠI</span>
+                <span>QUẢN LÝ MÃ PHÒNG & MẬT KHẨU NGƯỜI CHƠI</span>
               </h2>
-              <p class="text-xs text-slate-400">Tạo mã phòng 6 chữ số và 3 mật khẩu 4 chữ số bảo mật cho từng vị trí người chơi</p>
             </div>
             <div class="flex items-center gap-2">
               <button onclick="generateNewRoom()" class="btn-action px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs rounded-lg shadow-lg flex items-center gap-1.5 cursor-pointer">
-                <span>✨ TẠO PHÒNG MỚI</span>
+                <span>TẠO PHÒNG MỚI</span>
               </button>
             </div>
           </div>
@@ -355,7 +345,6 @@
                   <span class="text-xs font-black text-red-400 flex items-center gap-1">
                     <span class="w-2 h-2 rounded-full bg-red-500"></span> P1 (Đỏ)
                   </span>
-                  <span class="text-[10px] text-slate-400">Slot 1</span>
                 </div>
                 <div class="my-1.5 text-center">
                   <div class="text-[10px] text-slate-500">MẬT KHẨU (4 SỐ)</div>
@@ -377,7 +366,6 @@
                   <span class="text-xs font-black text-emerald-400 flex items-center gap-1">
                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span> P2 (Vàng)
                   </span>
-                  <span class="text-[10px] text-slate-400">Slot 2</span>
                 </div>
                 <div class="my-1.5 text-center">
                   <div class="text-[10px] text-slate-500">MẬT KHẨU (4 SỐ)</div>
@@ -399,7 +387,6 @@
                   <span class="text-xs font-black text-blue-400 flex items-center gap-1">
                     <span class="w-2 h-2 rounded-full bg-blue-500"></span> P3 (Xanh)
                   </span>
-                  <span class="text-[10px] text-slate-400">Slot 3</span>
                 </div>
                 <div class="my-1.5 text-center">
                   <div class="text-[10px] text-slate-500">MẬT KHẨU (4 SỐ)</div>
@@ -423,8 +410,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div class="p-2 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between">
                 <div>
-                  <div class="text-xs font-bold text-white">Host (MC)</div>
-                  <div class="text-[10px] text-slate-400">Màn hình điều hướng MC</div>
+                  <div class="text-xs font-bold text-white">Host</div>
                 </div>
                 <a id="btnOpenHost" href="/Host.html" target="_blank" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded text-xs font-bold">
                   Mở ↗
@@ -432,8 +418,7 @@
               </div>
               <div class="p-2 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between">
                 <div>
-                  <div class="text-xs font-bold text-white">Puzzleboard (Sân khấu)</div>
-                  <div class="text-[10px] text-slate-400">Màn hình chiếu ô chữ</div>
+                  <div class="text-xs font-bold text-white">Ô chữ</div>
                 </div>
                 <a id="btnOpenPuzzleboard" href="/Puzzleboard.html" target="_blank" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded text-xs font-bold">
                   Mở ↗
@@ -441,8 +426,7 @@
               </div>
               <div class="p-2 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between">
                 <div>
-                  <div class="text-xs font-bold text-white">Wheel (Mặt nón)</div>
-                  <div class="text-[10px] text-slate-400">Màn hình quay nón 22s</div>
+                  <div class="text-xs font-bold text-white">Nón</div>
                 </div>
                 <a id="btnOpenWheel" href="/Wheel.html" target="_blank" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded text-xs font-bold">
                   Mở ↗
@@ -472,7 +456,7 @@
             <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm">
               <div class="flex items-center justify-between mb-1 pb-1 border-b border-slate-800">
                 <h3 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                  <span>NHẬP ĐỀ & Ô CHỮ ĐANG PHÁT SÓNG</span>
+                  <span>NHẬP ĐỀ & Ô CHỮ HIỆN TẠI</span>
                 </h3>
                 <div class="flex items-center gap-1.5">
                   <span id="currentRoundBadgeInCard" class="text-[10px] text-amber-400 px-1.5 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
@@ -513,7 +497,7 @@
             <!-- ĐIỀU KHIỂN Ô CHỮ & MÀU VIỀN -->
             <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm space-y-1.5">
               <div class="flex items-center justify-between pb-0.5 border-b border-slate-800">
-                <h3 class="text-xs font-bold text-slate-200">ĐIỀU KHIỂN Ô CHỮ SÂN KHẤU</h3>
+                <h3 class="text-xs font-bold text-slate-200">ĐIỀU KHIỂN Ô CHỮ</h3>
                 <div class="text-[10px] text-slate-400" id="puzzleBoardStatusText">
                   Trạng thái: <span class="font-bold text-amber-300" id="boardStateLabel">Chưa hiển thị</span>
                 </div>
@@ -592,7 +576,7 @@
             <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm space-y-1.5">
               <div class="flex flex-wrap items-center justify-between gap-1 pb-1 border-b border-slate-800">
                 <div id="checkResultBadge" class="px-2 py-0.5 rounded bg-slate-950 border border-slate-700 text-[11px] font-bold text-amber-300">
-                  Chưa chọn chữ (Nhấn chữ A-Z bên dưới)
+                  Chưa chọn chữ
                 </div>
                 <div class="flex items-center gap-1">
                   <button onclick="openStep1Mark()" id="btnStep1Mark" class="btn-action px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-bold shadow">
@@ -735,7 +719,7 @@
             <!-- CHỌN NÓN -->
             <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm">
               <div class="flex items-center justify-between mb-1 pb-1 border-b border-slate-800">
-                <h3 class="text-xs font-bold text-slate-200">CHỌN NÓN SÂN KHẤU</h3>
+                <h3 class="text-xs font-bold text-slate-200">CHỌN NÓN</h3>
                 <span class="text-[10px] font-extrabold text-amber-400 px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30" id="currentSelectedWheelBadge">Nón 1</span>
               </div>
 
@@ -785,7 +769,7 @@
               <!-- Action buttons -->
               <div class="flex flex-wrap items-center gap-1">
                 <button onclick="triggerWheelSpin()" class="btn-action px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black rounded text-xs shadow">
-                  Quay Nón (22s)
+                  Quay Nón
                 </button>
                 <button onclick="allowPlayerSpin(1)" class="btn-action px-2.5 py-1 bg-red-600/90 hover:bg-red-500 text-white rounded text-[11px] font-bold">
                   Mở quay P1
@@ -1882,13 +1866,13 @@
         showToast('Đã reset bảng trống', 'info');
       } else if (action === 'start_reveal') {
         socket.emit('puzzle:start_reveal', { intervalMs: 1500 });
-        showToast('Bắt đầu tự động hiện chữ (Đoán nhanh)', 'info');
+        showToast('Bắt đầu hiện chữ & mở chuông cho 3 người chơi', 'info');
       } else if (action === 'stop_reveal') {
         socket.emit('puzzle:stop_reveal');
         showToast('Đã dừng hiện chữ', 'info');
       } else if (action === 'resume_reveal') {
         socket.emit('puzzle:resume_reveal');
-        showToast('Tiếp tục hiện chữ (Khung bảng chuyển sang màu tím)', 'info');
+        showToast('Tiếp tục hiện: Đã chuyển khung & 3 ô điểm về màu tím, mở lại chuông cho 3 người chơi', 'info');
       }
     }
 
