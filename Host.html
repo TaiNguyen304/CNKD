@@ -400,8 +400,12 @@
         buzzBanner.classList.add('hidden');
       }
 
-      // Alphabet Tracker
-      renderAlphabetTracker(state.puzzle.revealedLetters || []);
+      // Alphabet Tracker & Check Banner Sync
+      const revLetters = (state.puzzle && state.puzzle.revealedLetters) || [];
+      const chkLetter = (state.puzzle && state.puzzle.checkedLetter) || null;
+      const chkCount = (state.puzzle && state.puzzle.checkedCount) || 0;
+      renderAlphabetTracker(revLetters, chkLetter);
+      updateHostCheckBanner(chkLetter, chkCount);
     }
 
     const toneMap = {
@@ -588,20 +592,33 @@
       if (ratioEl) ratioEl.innerText = `${totalRevealed}/${totalLetters}`;
     }
 
-    function renderAlphabetTracker(revealedLetters) {
+    function renderAlphabetTracker(revealedLetters = [], checkedLetter = null) {
       const container = document.getElementById('hostAlphabetTracker');
       if (!container) return;
       container.innerHTML = '';
 
+      const cleanChecked = checkedLetter ? removeToneMarks(checkedLetter.trim().toUpperCase()) : null;
+
       alphabet.forEach(letter => {
-        const isCalled = revealedLetters.includes(letter);
+        const isCalled = (revealedLetters || []).includes(letter);
+        const isCurrentlyChecked = (cleanChecked === letter);
         const item = document.createElement('div');
-        item.className = `w-6 h-6 sm:w-7 sm:h-7 rounded text-[11px] font-bold flex items-center justify-center transition ${
-          isCalled
-            ? 'bg-emerald-600 text-white ring-1 ring-emerald-400'
-            : 'bg-slate-800/80 text-slate-400 border border-slate-700/60'
-        }`;
+        
+        let styleClass = 'w-6 h-6 sm:w-7 sm:h-7 rounded text-[11px] font-bold flex items-center justify-center transition ';
+        if (isCurrentlyChecked) {
+          // 1. Controller đang bấm chọn kiểm tra chữ này
+          styleClass += 'bg-fuchsia-600 text-white ring-2 ring-fuchsia-300 shadow-lg font-black scale-110';
+        } else if (isCalled) {
+          // 2. Chữ này đã được mở / đã gọi trong vòng
+          styleClass += 'bg-emerald-600 text-white ring-1 ring-emerald-400 opacity-90';
+        } else {
+          // 3. Chưa gọi
+          styleClass += 'bg-slate-800/80 text-slate-400 border border-slate-700/60';
+        }
+
+        item.className = styleClass;
         item.innerText = letter;
+        item.title = isCurrentlyChecked ? `Đang kiểm tra: Chữ "${letter}"` : (isCalled ? `Đã gọi: Chữ "${letter}"` : `Chưa gọi: Chữ "${letter}"`);
         container.appendChild(item);
       });
     }

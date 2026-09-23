@@ -1193,19 +1193,20 @@ io.on('connection', (socket) => {
     if (marked.length > 0) {
       room.gameState.puzzle.revealedIndices = Array.from(new Set([...room.gameState.puzzle.revealedIndices, ...marked]));
       room.gameState.puzzle.markedIndices = [];
-      if (letter) {
-        const cleanLetter = removeToneMarks(letter.trim().toUpperCase());
-        if (!room.gameState.puzzle.revealedLetters.includes(cleanLetter)) {
-          room.gameState.puzzle.revealedLetters.push(cleanLetter);
-        }
-      }
+    }
 
-      broadcastRoomState(room.id);
-
-      const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.openLetter) || '2nd_ding.wav';
-      if (soundFile && soundFile !== 'None') {
-        broadcastSound(room, 'sound:play', { type: 'letter_open', sound: soundFile });
+    if (letter) {
+      const cleanLetter = removeToneMarks(letter.trim().toUpperCase());
+      if (!room.gameState.puzzle.revealedLetters.includes(cleanLetter)) {
+        room.gameState.puzzle.revealedLetters.push(cleanLetter);
       }
+    }
+
+    broadcastRoomState(room.id);
+
+    const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.openLetter) || '2nd_ding.wav';
+    if (soundFile && soundFile !== 'None' && marked.length > 0) {
+      broadcastSound(room, 'sound:play', { type: 'letter_open', sound: soundFile });
     }
   });
 

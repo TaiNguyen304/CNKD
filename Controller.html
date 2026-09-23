@@ -2256,18 +2256,19 @@
       if (!container) return;
       container.innerHTML = '';
       
-      const rev = (localGameState && localGameState.puzzle && localGameState.puzzle.revealedLetters) || revealedLetters;
+      const rev = (localGameState && localGameState.puzzle && localGameState.puzzle.revealedLetters) || revealedLetters || [];
+      const currentActiveLetter = selectedLetter || (localGameState && localGameState.puzzle && localGameState.puzzle.checkedLetter) || null;
 
       alphabet.forEach(letter => {
         const isRevealed = rev.includes(letter);
-        const isSelected = selectedLetter === letter;
+        const isSelected = (currentActiveLetter === letter);
         const btn = document.createElement('button');
         btn.innerText = letter;
         btn.onclick = () => selectAndCheckLetter(letter);
         
         let styleClass = 'btn-action w-8 h-8 rounded-lg text-xs font-bold transition flex items-center justify-center ';
         if (isSelected) {
-          styleClass += 'bg-fuchsia-600 text-white ring-2 ring-fuchsia-300 shadow-lg scale-105';
+          styleClass += 'bg-fuchsia-600 text-white ring-2 ring-fuchsia-300 shadow-lg scale-105 font-black';
         } else if (isRevealed) {
           styleClass += 'bg-emerald-700 text-emerald-100 opacity-60 border border-emerald-600';
         } else {
