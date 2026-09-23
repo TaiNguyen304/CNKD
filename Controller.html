@@ -537,10 +537,14 @@
 
           <!-- Ghi chú trạng thái các ô chữ -->
           <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800 text-[11px]">
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
               <span class="flex items-center gap-1.5">
                 <span class="w-4 h-4 rounded bg-slate-900 border-2 border-amber-500/70 text-amber-300 inline-flex items-center justify-center text-[10px] font-black">A</span>
-                <span class="text-slate-300">Chưa mở (Chỉ MC/Ctrl thấy)</span>
+                <span class="text-slate-300">Chưa mở</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded bg-fuchsia-600 border border-fuchsia-300 text-white inline-flex items-center justify-center text-[10px] font-black">A</span>
+                <span class="text-fuchsia-400 font-bold">Đang kiểm tra (Bảng chữ cái)</span>
               </span>
               <span class="flex items-center gap-1.5">
                 <span class="w-4 h-4 rounded bg-blue-600 border border-blue-400 text-white inline-flex items-center justify-center text-[10px] font-black animate-pulse">A</span>
@@ -548,7 +552,7 @@
               </span>
               <span class="flex items-center gap-1.5">
                 <span class="w-4 h-4 rounded bg-emerald-500 border border-emerald-300 text-slate-950 inline-flex items-center justify-center text-[10px] font-black">A</span>
-                <span class="text-emerald-300 font-bold">Đã mở chữ cho khán giả (Mở lần 2)</span>
+                <span class="text-emerald-300 font-bold">Đã mở cho khán giả (Mở lần 2)</span>
               </span>
             </div>
 
@@ -676,13 +680,16 @@
             </section>
           </div>
 
-          <!-- LỚP PHẢI: BẢNG CHỮ CÁI A-Z + DÒ CHỮ + 4 LIST NHẠC HIỆU ỨNG (6 COLUMNS) -->
+          <!-- LỚP PHẢI: BẢNG CHỮ CÁI + DÒ CHỮ + 4 LIST NHẠC HIỆU ỨNG (6 COLUMNS) -->
           <div class="lg:col-span-6 space-y-1.5">
             <!-- BẢNG CHỮ CÁI & DÒ CHỮ -->
             <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm space-y-1.5">
               <div class="flex flex-wrap items-center justify-between gap-1 pb-1 border-b border-slate-800">
-                <div id="checkResultBadge" class="px-2 py-0.5 rounded bg-slate-950 border border-slate-700 text-[11px] font-bold text-amber-300">
-                  Chưa chọn chữ
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-black uppercase text-amber-400">BẢNG CHỮ CÁI:</span>
+                  <div id="checkResultBadge" class="px-2 py-0.5 rounded bg-slate-950 border border-slate-700 text-[11px] font-bold text-amber-300">
+                    Chưa chọn chữ
+                  </div>
                 </div>
                 <div class="flex items-center gap-1">
                   <button onclick="openStep1Mark()" id="btnStep1Mark" class="btn-action px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-bold shadow">
@@ -697,7 +704,7 @@
                 </div>
               </div>
 
-              <!-- Bàn phím chữ cái A-Z siêu gọn -->
+              <!-- Bàn phím 29 chữ cái Tiếng Việt + 4 chữ cái mở rộng -->
               <div class="flex flex-wrap gap-1" id="alphabetKeyboard">
                 <!-- Rendered by JS -->
               </div>
@@ -1994,6 +2001,20 @@
     let selectedLetterCount = 0;
 
     function selectAndCheckLetter(letter) {
+      if (selectedLetter === letter) {
+        selectedLetter = null;
+        selectedLetterCount = 0;
+        socket.emit('puzzle:check_letter', '');
+        const badge = document.getElementById('checkResultBadge');
+        if (badge) {
+          badge.innerText = 'Chưa chọn chữ cái';
+          badge.className = 'px-3.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs font-semibold text-slate-400';
+        }
+        renderAlphabet();
+        renderInteractiveGrid(localGameState);
+        return;
+      }
+
       selectedLetter = letter;
       socket.emit('puzzle:check_letter', letter);
 
@@ -2002,24 +2023,31 @@
       if (localGameState && localGameState.puzzle) {
         const matrix = localGameState.puzzle.gridMatrix;
         const revealed = localGameState.puzzle.revealedIndices || [];
+        const isBoardRevealed = localGameState.puzzle.boardState === 'revealed';
+        const cleanL = removeToneMarks(letter);
         if (matrix && Array.isArray(matrix) && matrix.length === 4) {
           for (let r = 0; r < 4; r++) {
             for (let c = 0; c < 16; c++) {
               const ch = (matrix[r] && matrix[r][c]) ? matrix[r][c] : '';
-              if (ch && ch.trim()) {
+              if (ch && String(ch).trim()) {
                 const cellIdx = r * 16 + c;
-                if (removeToneMarks(ch) === letter && !revealed.includes(cellIdx)) {
+                if (removeToneMarks(ch) === cleanL && !revealed.includes(cellIdx) && !isBoardRevealed) {
                   count++;
                 }
               }
             }
           }
         } else if (localGameState.puzzle.answer) {
-          const chars = localGameState.puzzle.answer.toUpperCase().split('');
-          for (let i = 0; i < chars.length; i++) {
-            const c = chars[i];
-            if (c !== ' ' && removeToneMarks(c) === letter && !revealed.includes(i)) {
-              count++;
+          const matrixFromAns = buildGridMatrix(localGameState.puzzle.answer);
+          for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 16; c++) {
+              const cell = matrixFromAns[r][c];
+              if (cell && cell.isLetter && cell.char) {
+                const cellIdx = r * 16 + c;
+                if (removeToneMarks(cell.char) === cleanL && !revealed.includes(cellIdx) && !isBoardRevealed) {
+                  count++;
+                }
+              }
             }
           }
         }
@@ -2027,14 +2055,20 @@
       selectedLetterCount = count;
       updateCheckBadge(letter, count);
       renderAlphabet();
+      renderInteractiveGrid(localGameState);
     }
 
     function updateCheckBadge(letter, count) {
       const badge = document.getElementById('checkResultBadge');
       if (!badge) return;
+      if (!letter) {
+        badge.innerText = 'Chưa chọn chữ cái';
+        badge.className = 'px-3.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs font-semibold text-slate-400';
+        return;
+      }
       if (count > 0) {
-        badge.innerHTML = `Chữ đang chọn: <strong class="text-white text-sm px-2 py-0.5 bg-blue-600 rounded">[ ${letter} ]</strong> — Tìm thấy: <strong class="text-emerald-400 text-sm font-black">[ ${count} ] ô</strong> trong câu đố`;
-        badge.className = 'px-3.5 py-1 rounded-lg bg-slate-900 border border-emerald-500/50 text-xs font-bold text-slate-200';
+        badge.innerHTML = `Chữ đang chọn: <strong class="text-white text-sm px-2 py-0.5 bg-fuchsia-600 rounded">[ ${letter} ]</strong> — Tìm thấy: <strong class="text-fuchsia-300 text-sm font-black">[ ${count} ] ô</strong> trong câu đố`;
+        badge.className = 'px-3.5 py-1 rounded-lg bg-slate-900 border border-fuchsia-500/60 text-xs font-bold text-slate-200';
       } else {
         badge.innerHTML = `Chữ đang chọn: <strong class="text-white text-sm px-2 py-0.5 bg-slate-700 rounded">[ ${letter} ]</strong> — <strong class="text-rose-400 text-sm font-black">KHÔNG CÓ</strong> chữ này trong câu đố`;
         badge.className = 'px-3.5 py-1 rounded-lg bg-slate-900 border border-rose-500/50 text-xs font-bold text-slate-200';
@@ -2043,9 +2077,11 @@
 
     // Socket response for check letter
     socket.on('puzzle:check_result', (data) => {
-      selectedLetter = data.letter;
-      selectedLetterCount = data.count;
+      selectedLetter = data.letter || null;
+      selectedLetterCount = data.count || 0;
       updateCheckBadge(data.letter, data.count);
+      renderAlphabet();
+      renderInteractiveGrid(localGameState);
     });
 
     // Mở lần 1: Các ô trống sẽ được đánh dấu (màu blue)
@@ -2153,6 +2189,8 @@
       const revealedIndices = (state && state.puzzle && state.puzzle.revealedIndices) || [];
       const markedIndices = (state && state.puzzle && state.puzzle.markedIndices) || [];
       const boardState = (state && state.puzzle && state.puzzle.boardState) || 'hidden';
+      const activeCheck = (state && state.puzzle && state.puzzle.checkedLetter) || selectedLetter || null;
+      const cleanActiveCheck = activeCheck ? removeToneMarks(activeCheck.trim().toUpperCase()) : null;
 
       const matrix = buildGridMatrix(answer, gridMatrix);
       container.innerHTML = '';
@@ -2173,17 +2211,25 @@
           if (cell.isLetter && cell.char) {
             const isRevealed = (boardState === 'revealed') || revealedIndices.includes(cellIdx);
             const isMarked = markedIndices.includes(cellIdx);
+            const isCheckedLetter = !isRevealed && !isMarked && cleanActiveCheck && (removeToneMarks(cell.char) === cleanActiveCheck);
 
             btn.innerText = cell.char;
             btn.onclick = () => onCellClicked(cellIdx);
 
             if (isRevealed) {
+              // 1. Đã mở cho khán giả
               btn.className = 'w-full aspect-square rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm border-2 border-emerald-300 shadow-md transition flex items-center justify-center cursor-pointer';
               btn.title = `Ô [Hàng ${r+1}, Cột ${c+1}]: Chữ "${cell.char}" (ĐÃ MỞ CHO KHÁN GIẢ)`;
             } else if (isMarked) {
+              // 2. Đang đánh dấu (Mở lần 1)
               btn.className = 'w-full aspect-square rounded bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm border-2 border-blue-400 ring-2 ring-blue-300/80 animate-pulse shadow-md transition flex items-center justify-center cursor-pointer';
               btn.title = `Ô [Hàng ${r+1}, Cột ${c+1}]: Chữ "${cell.char}" (ĐANG ĐÁNH DẤU - Bấm lần 2 để Mở chữ)`;
+            } else if (isCheckedLetter) {
+              // 3. Đang kiểm tra từ bảng chữ cái (Chưa mở lần nào)
+              btn.className = 'w-full aspect-square rounded bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-black text-xs sm:text-sm border-2 border-fuchsia-300 ring-4 ring-fuchsia-400/90 shadow-xl transition flex items-center justify-center cursor-pointer';
+              btn.title = `Ô [Hàng ${r+1}, Cột ${c+1}]: Chữ "${cell.char}" (ĐANG KIỂM TRA TỪ BẢNG CHỮ CÁI - Bấm để Đánh dấu)`;
             } else {
+              // 4. Chưa mở
               btn.className = 'w-full aspect-square rounded bg-slate-900 hover:bg-indigo-900/80 text-amber-300 hover:text-amber-200 font-black text-xs sm:text-sm border-2 border-amber-500/70 shadow transition flex items-center justify-center cursor-pointer';
               btn.title = `Ô [Hàng ${r+1}, Cột ${c+1}]: Chữ "${cell.char}" (CHƯA MỞ - Bấm lần 1 để Đánh dấu)`;
             }
@@ -2221,7 +2267,7 @@
         
         let styleClass = 'btn-action w-8 h-8 rounded-lg text-xs font-bold transition flex items-center justify-center ';
         if (isSelected) {
-          styleClass += 'bg-blue-600 text-white ring-2 ring-amber-400 shadow-lg scale-105';
+          styleClass += 'bg-fuchsia-600 text-white ring-2 ring-fuchsia-300 shadow-lg scale-105';
         } else if (isRevealed) {
           styleClass += 'bg-emerald-700 text-emerald-100 opacity-60 border border-emerald-600';
         } else {

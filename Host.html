@@ -170,6 +170,17 @@
         </div>
       </div>
 
+      <!-- Letter Check Alert Banner (Thông báo kiểm tra chữ cái từ Controller) -->
+      <div id="hostCheckLetterBanner" class="hidden p-2.5 rounded-xl bg-gradient-to-r from-fuchsia-950/90 via-slate-900 to-fuchsia-950/90 border-2 border-fuchsia-400 shadow-xl flex items-center justify-between transition-all">
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded bg-fuchsia-500 text-white font-black text-[11px] uppercase tracking-wider">CONTROLLER KIỂM TRA CHỮ:</span>
+          <span id="hostCheckedLetterChar" class="text-xl font-black text-fuchsia-300 font-mono tracking-wider">[ A ]</span>
+        </div>
+        <div id="hostCheckedLetterCount" class="text-xs sm:text-sm font-black text-fuchsia-300 bg-slate-950/90 px-3 py-1 rounded-lg border border-fuchsia-500/50">
+          Tìm thấy: 0 ô
+        </div>
+      </div>
+
       <!-- Answer (Đáp án dành cho MC) -->
       <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex-shrink-0 space-y-2">
         <div class="flex items-center justify-between text-xs">
@@ -182,7 +193,7 @@
         <div class="flex flex-col gap-1.5 items-center justify-center min-h-[60px] p-2 bg-slate-900/60 rounded-lg border border-slate-800/80" id="hostAnswerTiles">
           <!-- Populated by JS -->
         </div>
-        <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-[11px] text-slate-300 pt-1 border-t border-slate-800">
+        <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-[11px] text-slate-300 pt-1 border-t border-slate-800">
           <span class="flex items-center gap-1.5">
             <span class="w-3.5 h-3.5 rounded bg-emerald-500 border border-emerald-300 inline-flex items-center justify-center text-[9px] font-black text-slate-950">✓</span>
             <strong class="text-emerald-400 font-bold">Khán giả đã thấy</strong>
@@ -192,17 +203,20 @@
             <strong class="text-blue-400 font-bold">Đang đánh dấu</strong>
           </span>
           <span class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded bg-fuchsia-600 border border-fuchsia-300 inline-flex items-center justify-center text-[9px] font-black text-white">★</span>
+            <strong class="text-fuchsia-400 font-bold">Đang kiểm tra (Bảng chữ cái)</strong>
+          </span>
+          <span class="flex items-center gap-1.5">
             <span class="w-3.5 h-3.5 rounded bg-slate-800 border-2 border-amber-400 text-amber-300 inline-flex items-center justify-center text-[9px] font-black">A</span>
-            <strong class="text-amber-300 font-bold">Chỉ MC thấy (Chưa mở)</strong>
+            <strong class="text-amber-300 font-bold">Chưa mở (Chỉ MC thấy)</strong>
           </span>
         </div>
       </div>
 
-      <!-- Letter Tracking (Theo dõi chữ cái đã gọi) -->
+      <!-- Letter Tracking (Bảng chữ cái - Theo dõi chữ cái đã gọi) -->
       <div class="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex-shrink-0 space-y-1.5">
         <div class="flex items-center justify-between text-xs">
-          <span class="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">THEO DÕI CHỮ CÁI ĐÃ GỌI:</span>
-          
+          <span class="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">BẢNG CHỮ CÁI (THEO DÕI ĐÃ GỌI):</span>
         </div>
         <div class="flex flex-wrap gap-1" id="hostAlphabetTracker">
           <!-- Populated by JS -->
@@ -273,6 +287,33 @@
       updateHostUI(state);
     });
 
+    socket.on('puzzle:check_result', (data) => {
+      if (data && data.letter) {
+        updateHostCheckBanner(data.letter, data.count);
+      }
+    });
+
+    function updateHostCheckBanner(letter, count) {
+      const banner = document.getElementById('hostCheckLetterBanner');
+      const charEl = document.getElementById('hostCheckedLetterChar');
+      const countEl = document.getElementById('hostCheckedLetterCount');
+      if (!banner || !charEl || !countEl) return;
+
+      if (letter) {
+        charEl.innerText = `[ ${letter} ]`;
+        if (count > 0) {
+          countEl.innerHTML = `Có <strong class="text-amber-300 text-sm sm:text-base font-black">${count}</strong> chữ <span class="font-mono text-white">[ ${letter} ]</span> trong ô chữ`;
+          countEl.className = 'text-xs sm:text-sm font-bold text-emerald-400 bg-slate-950/90 px-3 py-1 rounded-lg border border-emerald-500/50 shadow-sm';
+        } else {
+          countEl.innerHTML = `<strong class="text-rose-400 font-black">KHÔNG CÓ</strong> chữ <span class="font-mono text-white">[ ${letter} ]</span> trong ô chữ`;
+          countEl.className = 'text-xs sm:text-sm font-bold text-rose-400 bg-slate-950/90 px-3 py-1 rounded-lg border border-rose-500/50 shadow-sm';
+        }
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
     // Tự động tải và đồng bộ trạng thái mới nhất ngay khi F5 / Reload / Vào muộn
     if (roomId) {
       fetch('/api/state?roomid=' + encodeURIComponent(roomId) + '&role=host')
@@ -300,13 +341,17 @@
       const clueEl = document.getElementById('hostClue');
       if (clueEl) clueEl.innerText = state.puzzle.clue || 'Không có gợi ý';
 
+      // Check letter banner update
+      updateHostCheckBanner(state.puzzle.checkedLetter, state.puzzle.checkedCount);
+
       // Answer tiles render for Host
       renderHostAnswer(
         state.puzzle.answer || '',
         state.puzzle.revealedIndices || [],
         state.puzzle.gridMatrix || null,
         state.puzzle.boardState || 'visible',
-        state.puzzle.markedIndices || []
+        state.puzzle.markedIndices || [],
+        state.puzzle.checkedLetter || null
       );
 
       // 3 Players Table Rows
@@ -357,6 +402,26 @@
 
       // Alphabet Tracker
       renderAlphabetTracker(state.puzzle.revealedLetters || []);
+    }
+
+    const toneMap = {
+      'À':'A','Á':'A','Ả':'A','Ã':'A','Ạ':'A',
+      'Â':'Â','Ầ':'Â','Ấ':'Â','Ẩ':'Â','Ẫ':'Â','Ậ':'Â',
+      'Ă':'Ă','Ằ':'Ă','Ắ':'Ă','Ẳ':'Ă','Ẵ':'Ă','Ặ':'Ă',
+      'È':'E','É':'E','Ẻ':'E','Ẽ':'E','Ẹ':'E',
+      'Ê':'Ê','Ề':'Ê','Ế':'Ê','Ể':'Ê','Ễ':'Ê','Ệ':'Ê',
+      'Ì':'I','Í':'I','Ỉ':'I','Ĩ':'I','Ị':'I',
+      'Ò':'O','Ó':'O','Ỏ':'O','Õ':'O','Ọ':'O',
+      'Ô':'Ô','Ồ':'Ô','Ố':'Ô','Ổ':'Ô','Ỗ':'Ô','Ộ':'Ô',
+      'Ơ':'Ơ','Ờ':'Ơ','Ớ':'Ơ','Ở':'Ơ','Ỡ':'Ơ','Ợ':'Ơ',
+      'Ù':'U','Ú':'U','Ủ':'U','Ũ':'U','Ụ':'U',
+      'Ư':'Ư','Ừ':'Ư','Ứ':'Ư','Ử':'Ư','Ữ':'Ư','Ự':'Ư',
+      'Ỳ':'Y','Ý':'Y','Ỷ':'Y','Ỹ':'Y','Ỵ':'Y',
+      'Đ':'Đ'
+    };
+    function removeToneMarks(str) {
+      if (!str) return '';
+      return str.split('').map(c => toneMap[c.toUpperCase()] || c.toUpperCase()).join('');
     }
 
     function buildHostMatrix(answer, gridMatrix = null) {
@@ -443,7 +508,7 @@
       return grid;
     }
 
-    function renderHostAnswer(answer, revealedIndices = [], gridMatrix = null, boardState = 'visible', markedIndices = []) {
+    function renderHostAnswer(answer, revealedIndices = [], gridMatrix = null, boardState = 'visible', markedIndices = [], checkedLetter = null) {
       const container = document.getElementById('hostAnswerTiles');
       const ratioEl = document.getElementById('revealedCountRatio');
       if (!container) return;
@@ -458,6 +523,7 @@
       const grid = buildHostMatrix(answer, gridMatrix);
       let totalLetters = 0;
       let totalRevealed = 0;
+      const cleanChecked = checkedLetter ? removeToneMarks(checkedLetter.trim().toUpperCase()) : null;
 
       // Filter rows that have at least one letter
       grid.forEach((row, rIdx) => {
@@ -488,31 +554,29 @@
             totalLetters++;
             const isRevealed = (boardState === 'revealed') || (revealedIndices && revealedIndices.includes(cellIdx));
             const isMarked = markedIndices && markedIndices.includes(cellIdx);
+            const isCheckedLetter = !isRevealed && !isMarked && cleanChecked && (removeToneMarks(cell.char) === cleanChecked);
 
             if (isRevealed) totalRevealed++;
 
             const tile = document.createElement('div');
+            tile.innerText = cell.char;
+
             if (isRevealed) {
-              // Khán giả đã thấy
-              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex flex-col items-center justify-center font-black text-sm sm:text-base shadow-lg bg-emerald-500 text-slate-950 border-2 border-emerald-300 ring-2 ring-emerald-400/50 relative';
-              tile.innerHTML = `
-                <span>${cell.char}</span>
-                <span class="text-[7px] leading-none uppercase font-extrabold text-slate-900 mt-0.5">ĐÃ THẤY</span>
-              `;
+              // 1. Khán giả đã thấy
+              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex items-center justify-center font-black text-sm sm:text-base shadow-lg bg-emerald-500 text-slate-950 border-2 border-emerald-300 ring-2 ring-emerald-400/50 relative';
+              tile.title = `Khán giả đã thấy: ${cell.char}`;
             } else if (isMarked) {
-              // Đang đánh dấu (Mở lần 1)
-              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex flex-col items-center justify-center font-black text-sm sm:text-base shadow-lg bg-blue-600 text-white border-2 border-blue-400 ring-2 ring-blue-300/60 animate-pulse relative';
-              tile.innerHTML = `
-                <span>${cell.char}</span>
-                <span class="text-[7px] leading-none uppercase font-extrabold text-blue-200 mt-0.5">DẤU</span>
-              `;
+              // 2. Đang đánh dấu (Mở lần 1)
+              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex items-center justify-center font-black text-sm sm:text-base shadow-lg bg-blue-600 text-white border-2 border-blue-400 ring-2 ring-blue-300/60 animate-pulse relative';
+              tile.title = `Đang đánh dấu: ${cell.char}`;
+            } else if (isCheckedLetter) {
+              // 3. Đang kiểm tra từ Controller (Chưa mở lần nào)
+              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex items-center justify-center font-black text-sm sm:text-base shadow-xl bg-fuchsia-600 text-white border-2 border-fuchsia-300 ring-4 ring-fuchsia-400/90 relative';
+              tile.title = `Đang chọn từ Controller: ${cell.char}`;
             } else {
-              // Chỉ MC thấy (Chưa mở)
-              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex flex-col items-center justify-center font-black text-sm sm:text-base shadow bg-slate-900 border-2 border-amber-400/80 text-amber-300 relative opacity-95';
-              tile.innerHTML = `
-                <span>${cell.char}</span>
-                <span class="text-[7px] leading-none uppercase font-bold text-slate-400 mt-0.5">ẨN</span>
-              `;
+              // 4. Chưa mở (Chỉ MC thấy)
+              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex items-center justify-center font-black text-sm sm:text-base shadow bg-slate-900 border-2 border-amber-400/80 text-amber-300 relative opacity-95';
+              tile.title = `Chưa mở: ${cell.char}`;
             }
             rowDiv.appendChild(tile);
           }

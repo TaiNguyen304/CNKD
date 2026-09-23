@@ -186,6 +186,9 @@ function createNewGameState() {
       markedIndices: [],
       boardState: 'hidden',
       revealedLetters: [],
+      checkedLetter: null,
+      checkedCount: 0,
+      checkedIndices: [],
       showCategory: true,
       showClue: true,
       borderColor: '#800080'
@@ -1004,6 +1007,9 @@ io.on('connection', (socket) => {
       room.gameState.puzzle.revealedIndices = [];
       room.gameState.puzzle.markedIndices = [];
       room.gameState.puzzle.revealedLetters = [];
+      room.gameState.puzzle.checkedLetter = null;
+      room.gameState.puzzle.checkedCount = 0;
+      room.gameState.puzzle.checkedIndices = [];
       room.gameState.puzzle.boardState = 'visible';
       broadcastRoomState(room.id);
     }
@@ -1026,6 +1032,9 @@ io.on('connection', (socket) => {
     const room = currentRoom();
     if (!room) return;
     room.gameState.puzzle.boardState = 'revealed';
+    room.gameState.puzzle.checkedLetter = null;
+    room.gameState.puzzle.checkedCount = 0;
+    room.gameState.puzzle.checkedIndices = [];
     stopRoomAutoReveal(room);
     broadcastRoomState(room.id);
 
@@ -1042,6 +1051,9 @@ io.on('connection', (socket) => {
     room.gameState.puzzle.revealedIndices = [];
     room.gameState.puzzle.markedIndices = [];
     room.gameState.puzzle.revealedLetters = [];
+    room.gameState.puzzle.checkedLetter = null;
+    room.gameState.puzzle.checkedCount = 0;
+    room.gameState.puzzle.checkedIndices = [];
     room.gameState.puzzle.borderColor = '#800080';
     room.gameState.topicSelection.active = false;
     stopRoomAutoReveal(room);
@@ -1072,18 +1084,30 @@ io.on('connection', (socket) => {
   // Letter checking and marking
   socket.on('puzzle:check_letter', (letter) => {
     const room = currentRoom();
-    if (!room || !letter) return;
+    if (!room) return;
+    if (!letter || !letter.trim()) {
+      room.gameState.puzzle.checkedLetter = null;
+      room.gameState.puzzle.checkedCount = 0;
+      room.gameState.puzzle.checkedIndices = [];
+      broadcastRoomState(room.id);
+      return;
+    }
     const cleanLetter = removeToneMarks(letter.trim().toUpperCase());
     let count = 0;
     const matchingIndices = [];
+
+    if (!room.gameState.puzzle.gridMatrix && room.gameState.puzzle.answer) {
+      room.gameState.puzzle.gridMatrix = buildGridMatrixFromAnswer(room.gameState.puzzle.answer);
+    }
 
     if (room.gameState.puzzle.gridMatrix && Array.isArray(room.gameState.puzzle.gridMatrix)) {
       for (let r = 0; r < 4; r++) {
         for (let c = 0; c < 16; c++) {
           const char = (room.gameState.puzzle.gridMatrix[r] && room.gameState.puzzle.gridMatrix[r][c]) ? room.gameState.puzzle.gridMatrix[r][c] : '';
-          if (char && char.trim()) {
+          if (char && String(char).trim()) {
             const cellIdx = r * 16 + c;
-            if (removeToneMarks(char) === cleanLetter && !room.gameState.puzzle.revealedIndices.includes(cellIdx)) {
+            const isRevealed = (room.gameState.puzzle.boardState === 'revealed') || (room.gameState.puzzle.revealedIndices && room.gameState.puzzle.revealedIndices.includes(cellIdx));
+            if (removeToneMarks(char) === cleanLetter && !isRevealed) {
               count++;
               matchingIndices.push(cellIdx);
             }
@@ -1094,18 +1118,33 @@ io.on('connection', (socket) => {
       const chars = room.gameState.puzzle.answer.toUpperCase().split('');
       for (let i = 0; i < chars.length; i++) {
         const c = chars[i];
-        if (c !== ' ' && removeToneMarks(c) === cleanLetter && !room.gameState.puzzle.revealedIndices.includes(i)) {
+        const isRevealed = (room.gameState.puzzle.boardState === 'revealed') || (room.gameState.puzzle.revealedIndices && room.gameState.puzzle.revealedIndices.includes(i));
+        if (c !== ' ' && removeToneMarks(c) === cleanLetter && !isRevealed) {
           count++;
           matchingIndices.push(i);
         }
       }
     }
 
-    socket.emit('puzzle:check_result', {
+    room.gameState.puzzle.checkedLetter = cleanLetter;
+    room.gameState.puzzle.checkedCount = count;
+    room.gameState.puzzle.checkedIndices = matchingIndices;
+    broadcastRoomState(room.id);
+
+    io.to(room.id).emit('puzzle:check_result', {
       letter: cleanLetter,
       count,
       indices: matchingIndices
     });
+  });
+
+  socket.on('puzzle:clear_checked', () => {
+    const room = currentRoom();
+    if (!room) return;
+    room.gameState.puzzle.checkedLetter = null;
+    room.gameState.puzzle.checkedCount = 0;
+    room.gameState.puzzle.checkedIndices = [];
+    broadcastRoomState(room.id);
   });
 
   // Step 1: Mark matching letters (Blue)
@@ -1218,10 +1257,29 @@ io.on('connection', (socket) => {
       if (!revealed.includes(cellIdx)) {
         room.gameState.puzzle.revealedIndices = [...revealed, cellIdx];
       }
-      const cleanChar = removeToneMarks(char.toUpperCase());
-      if (cleanChar && !room.gameState.puzzle.revealedLetters.includes(cleanChar)) {
-        room.gameState.puzzle.revealedLetters.push(cleanChar);
+
+      // Refresh checkedLetter count for remaining unrevealed matching cells
+      if (room.gameState.puzzle.checkedLetter) {
+        let chkCount = 0;
+        const chkIndices = [];
+        if (room.gameState.puzzle.gridMatrix && Array.isArray(room.gameState.puzzle.gridMatrix)) {
+          for (let r0 = 0; r0 < 4; r0++) {
+            for (let c0 = 0; c0 < 16; c0++) {
+              const ch0 = (room.gameState.puzzle.gridMatrix[r0] && room.gameState.puzzle.gridMatrix[r0][c0]) ? room.gameState.puzzle.gridMatrix[r0][c0] : '';
+              if (ch0 && String(ch0).trim()) {
+                const idx0 = r0 * 16 + c0;
+                if (removeToneMarks(ch0) === room.gameState.puzzle.checkedLetter && !room.gameState.puzzle.revealedIndices.includes(idx0)) {
+                  chkCount++;
+                  chkIndices.push(idx0);
+                }
+              }
+            }
+          }
+        }
+        room.gameState.puzzle.checkedCount = chkCount;
+        room.gameState.puzzle.checkedIndices = chkIndices;
       }
+
       broadcastRoomState(room.id);
 
       const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.openLetter) || '2nd_ding.wav';
