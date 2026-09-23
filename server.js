@@ -400,6 +400,81 @@ function removeToneMarks(str) {
   return str.split('').map(c => toneMap[c.toUpperCase()] || c.toUpperCase()).join('');
 }
 
+// Build 4x16 grid matrix helper
+function buildGridMatrixFromAnswer(answer, existingGridMatrix = null) {
+  if (existingGridMatrix && Array.isArray(existingGridMatrix) && existingGridMatrix.length === 4) {
+    let hasLetter = false;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 16; c++) {
+        if (existingGridMatrix[r] && existingGridMatrix[r][c] && String(existingGridMatrix[r][c]).trim()) {
+          hasLetter = true;
+          break;
+        }
+      }
+    }
+    if (hasLetter) return existingGridMatrix;
+  }
+
+  const grid = Array.from({ length: 4 }, () => Array(16).fill(''));
+  if (!answer || !answer.trim()) return grid;
+
+  const words = answer.trim().split(/\s+/).filter(w => w.length > 0);
+  const rows = [[], [], [], []];
+  let curRow = 0;
+  let curLen = 0;
+
+  for (let w = 0; w < words.length; w++) {
+    const word = words[w];
+    const needed = curLen === 0 ? word.length : word.length + 1;
+
+    if (curLen + needed <= 16) {
+      rows[curRow].push(word);
+      curLen += needed;
+    } else {
+      curRow++;
+      if (curRow >= 4) {
+        curRow = 3;
+        rows[curRow].push(word);
+      } else {
+        rows[curRow].push(word);
+        curLen = word.length;
+      }
+    }
+  }
+
+  const activeRows = rows.filter(r => r.length > 0);
+  const usedCount = activeRows.length;
+  let startRow = 0;
+  if (usedCount === 1 || usedCount === 2) startRow = 1;
+  else if (usedCount === 3) startRow = 0;
+
+  for (let r = 0; r < usedCount; r++) {
+    const targetRowIdx = startRow + r;
+    if (targetRowIdx >= 4) break;
+
+    const rowWords = rows[r];
+    const textInRow = rowWords.join(' ');
+    const leftPad = Math.max(0, Math.floor((16 - textInRow.length) / 2));
+
+    let col = leftPad;
+    for (let w = 0; w < rowWords.length; w++) {
+      const word = rowWords[w];
+      for (let chIdx = 0; chIdx < word.length; chIdx++) {
+        if (col < 16) {
+          grid[targetRowIdx][col] = word[chIdx].toUpperCase();
+          col++;
+        }
+      }
+      if (col < 16 && w < rowWords.length - 1) {
+        grid[targetRowIdx][col] = '';
+        col++;
+      }
+    }
+  }
+
+  return grid;
+}
+
 // SOCKET.IO EVENT HANDLING
 io.on('connection', (socket) => {
   // Client joins a specific room
@@ -925,7 +1000,7 @@ io.on('connection', (socket) => {
       room.gameState.puzzle.category = category || 'CHỦ ĐỀ';
       room.gameState.puzzle.clue = clue || '';
       room.gameState.puzzle.answer = answer || '';
-      room.gameState.puzzle.gridMatrix = gridMatrix || null;
+      room.gameState.puzzle.gridMatrix = buildGridMatrixFromAnswer(answer, gridMatrix);
       room.gameState.puzzle.revealedIndices = [];
       room.gameState.puzzle.markedIndices = [];
       room.gameState.puzzle.revealedLetters = [];
@@ -1100,6 +1175,60 @@ io.on('connection', (socket) => {
     if (!room) return;
     room.gameState.puzzle.markedIndices = [];
     broadcastRoomState(room.id);
+  });
+
+  // Direct cell click on 4x16 interactive grid:
+  // Click 1: Mark cell (Mở lần 1)
+  // Click 2: Reveal cell (Mở lần 2)
+  socket.on('puzzle:click_cell', (data) => {
+    const room = currentRoom();
+    if (!room) return;
+    const cellIdx = (typeof data === 'object' && data !== null) ? Number(data.index ?? data.cellIdx) : Number(data);
+    if (isNaN(cellIdx) || cellIdx < 0 || cellIdx >= 64) return;
+
+    if (!room.gameState.puzzle.gridMatrix && room.gameState.puzzle.answer) {
+      room.gameState.puzzle.gridMatrix = buildGridMatrixFromAnswer(room.gameState.puzzle.answer);
+    }
+
+    const r = Math.floor(cellIdx / 16);
+    const c = cellIdx % 16;
+    const char = (room.gameState.puzzle.gridMatrix && room.gameState.puzzle.gridMatrix[r] && room.gameState.puzzle.gridMatrix[r][c])
+      ? String(room.gameState.puzzle.gridMatrix[r][c]).trim()
+      : '';
+
+    // Only clickable if cell contains a letter
+    if (!char) return;
+
+    const marked = room.gameState.puzzle.markedIndices || [];
+    const revealed = room.gameState.puzzle.revealedIndices || [];
+
+    // Click lần 1: Nếu chưa đánh dấu và chưa mở -> Đánh dấu ô đó (Mở lần 1)
+    if (!marked.includes(cellIdx) && !revealed.includes(cellIdx)) {
+      room.gameState.puzzle.markedIndices = [...marked, cellIdx];
+      broadcastRoomState(room.id);
+
+      const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.markLetter) || 'ding.wav';
+      if (soundFile && soundFile !== 'None') {
+        broadcastSound(room, 'sound:play', { type: 'letter_mark', sound: soundFile });
+      }
+    }
+    // Click lần 2: Nếu đã đánh dấu -> Mở chữ (Mở lần 2)
+    else if (marked.includes(cellIdx)) {
+      room.gameState.puzzle.markedIndices = marked.filter(idx => idx !== cellIdx);
+      if (!revealed.includes(cellIdx)) {
+        room.gameState.puzzle.revealedIndices = [...revealed, cellIdx];
+      }
+      const cleanChar = removeToneMarks(char.toUpperCase());
+      if (cleanChar && !room.gameState.puzzle.revealedLetters.includes(cleanChar)) {
+        room.gameState.puzzle.revealedLetters.push(cleanChar);
+      }
+      broadcastRoomState(room.id);
+
+      const soundFile = (room.gameState.puzzleSounds && room.gameState.puzzleSounds.openLetter) || '2nd_ding.wav';
+      if (soundFile && soundFile !== 'None') {
+        broadcastSound(room, 'sound:play', { type: 'letter_open', sound: soundFile });
+      }
+    }
   });
 
   // Auto Letter Reveal

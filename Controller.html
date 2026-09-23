@@ -287,10 +287,10 @@
         <span>MÃ PHÒNG & MẬT KHẨU</span>
       </button>
       <button id="btn_tab_tabPuzzle" onclick="switchTab('tabPuzzle')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-amber-500 text-slate-950 border border-amber-400 shadow transition flex items-center gap-1 whitespace-nowrap">
-        <span>ĐIỀU KHIỂN Ô CHỮ & ĐỀ THI</span>
+        <span>ĐIỀU KHIỂN Ô CHỮ & VÒNG CHƠI</span>
       </button>
       <button id="btn_tab_tabWheel" onclick="switchTab('tabWheel')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
-        <span>VÒNG CHƠI & NÓN</span>
+        <span>ĐIỀU KHIỂN NÓN</span>
       </button>
       <button id="btn_tab_tabSound" onclick="switchTab('tabSound')" class="tab-btn px-2.5 py-1 rounded text-[11px] font-black bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 whitespace-nowrap">
         <span>SOUNDBOARD</span>
@@ -446,17 +446,136 @@
         </section>
       </div><!-- /tabRoom -->
 
-      <!-- TAB 1: ĐIỀU KHIỂN Ô CHỮ & ĐỀ THI (THIẾT KẾ COMPACT VỪA KHUNG HÌNH) -->
+      <!-- TAB 1: ĐIỀU KHIỂN Ô CHỮ & VÒNG CHƠI (TẬP TRUNG TẤT CẢ VÒNG & BẢNG 4x16 NÚT BẤM) -->
       <div id="tabPuzzle" class="tab-content space-y-1.5">
+        
+        <!-- MỤC VÒNG CHƠI (12 NÚT VÒNG CHƠI) -->
+        <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm">
+          <div class="flex items-center justify-between mb-1 pb-0.5 border-b border-slate-800">
+            <h2 class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              <span>MỤC VÒNG CHƠI</span>
+            </h2>
+            <div class="text-[10px] text-slate-300">
+              Vòng hiện tại: <span id="currentRoundDisplay" class="font-extrabold text-amber-400 text-xs px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
+            </div>
+          </div>
+
+          <!-- 12 Nút Vòng Chơi -->
+          <div class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-1">
+            <button onclick="triggerRoundClick('Đoán nhanh 1')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Đoán nhanh 1
+            </button>
+            <button onclick="triggerRoundClick('Đoán nhanh 2')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Đoán nhanh 2
+            </button>
+            <button onclick="triggerRoundClick('Vòng 1')" class="round-btn btn-action py-1 px-1 bg-indigo-600 border border-indigo-400 text-white rounded text-[10px] font-bold text-center">
+              Vòng 1
+            </button>
+            <button onclick="triggerRoundClick('Vòng 2')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Vòng 2
+            </button>
+            <button onclick="triggerRoundClick('Vòng 3')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Vòng 3
+            </button>
+            <button onclick="triggerRoundClick('Đoán nhanh 3')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Đoán nhanh 3
+            </button>
+            <button onclick="triggerRoundClick('ĐNLH 1')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              ĐNLH 1
+            </button>
+            <button onclick="triggerRoundClick('ĐNLH 2')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              ĐNLH 2
+            </button>
+            <button onclick="triggerRoundClick('ĐNLH 3')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              ĐNLH 3
+            </button>
+            <button onclick="triggerRoundClick('Vòng 4')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Vòng 4
+            </button>
+            <button onclick="triggerRoundClick('Vòng khán giả')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
+              Vòng khán giả
+            </button>
+            <button onclick="triggerRoundClick('Vòng đặc biệt')" class="round-btn btn-action py-1 px-1 bg-gradient-to-r from-amber-600 to-yellow-500 border border-yellow-400 text-white rounded text-[10px] font-black text-center shadow">
+              Vòng đặc biệt
+            </button>
+          </div>
+        </section>
+
+        <!-- BẢNG Ô CHỮ TƯƠNG TÁC (4 HÀNG x 16 CỘT = 64 Ô NÚT BẤM) -->
+        <section class="bg-slate-900/95 border-2 border-indigo-500/40 rounded-xl p-2.5 shadow-xl space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-1.5 pb-1 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <h3 class="text-xs sm:text-sm font-black text-amber-400 flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>BẢNG Ô CHỮ TƯƠNG TÁC (4 HÀNG x 16 CỘT)</span>
+              </h3>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-700" id="ctrlGridRoundBadge">Vòng 1</span>
+            </div>
+            <div class="flex items-center gap-1 text-[11px]">
+              <span class="text-slate-400">Trạng thái:</span>
+              <span class="font-bold text-amber-300" id="boardStateLabel">Chưa hiển thị</span>
+            </div>
+          </div>
+
+          <!-- Thông báo hướng dẫn click -->
+          <div class="text-[11px] text-slate-300 bg-slate-950/70 p-1.5 rounded-lg border border-slate-800/80 flex items-center justify-between flex-wrap gap-1">
+            <span>👉 <strong class="text-amber-300 font-bold">Chỉ ô có chữ bấm được:</strong> Bấm lần 1 = <span class="text-blue-400 font-bold">Đánh dấu (Mở lần 1)</span> | Bấm lần 2 = <span class="text-emerald-400 font-bold">Mở chữ (Mở lần 2)</span></span>
+            <div class="flex items-center gap-2">
+              <button onclick="openStep2Reveal()" class="btn-action px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold shadow">
+                Mở tất cả ô đánh dấu
+              </button>
+              <button onclick="clearMarkedLetters()" class="btn-action px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] border border-slate-700">
+                Xóa đánh dấu
+              </button>
+            </div>
+          </div>
+
+          <!-- Container 4x16 Button Grid -->
+          <div id="controllerPuzzleGrid" class="w-full flex flex-col gap-1 p-2 bg-slate-950/90 rounded-lg border border-slate-800/90 min-h-[140px] justify-center items-center">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Ghi chú trạng thái các ô chữ -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800 text-[11px]">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded bg-slate-900 border-2 border-amber-500/70 text-amber-300 inline-flex items-center justify-center text-[10px] font-black">A</span>
+                <span class="text-slate-300">Chưa mở (Chỉ MC/Ctrl thấy)</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded bg-blue-600 border border-blue-400 text-white inline-flex items-center justify-center text-[10px] font-black animate-pulse">A</span>
+                <span class="text-blue-300 font-bold">Đang đánh dấu (Mở lần 1)</span>
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded bg-emerald-500 border border-emerald-300 text-slate-950 inline-flex items-center justify-center text-[10px] font-black">A</span>
+                <span class="text-emerald-300 font-bold">Đã mở chữ cho khán giả (Mở lần 2)</span>
+              </span>
+            </div>
+
+            <div class="flex items-center gap-1">
+              <button onclick="puzzleAction('show')" class="btn-action px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold shadow">
+                Hiện ô chữ
+              </button>
+              <button onclick="puzzleAction('solve')" class="btn-action px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold shadow">
+                Giải ô chữ
+              </button>
+              <button onclick="puzzleAction('reset')" class="btn-action px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[10px]">
+                Reset trống
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2 CỘT DƯỚI: NHẬP ĐỀ THI & MÀU VIỀN (TRÁI) + BẢNG CHỮ CÁI A-Z & SOUND CONFIG (PHẢI) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-1.5 items-start">
           
-          <!-- LỚP TRÁI: NHẬP ĐỀ EXCEL + Ô CHỮ ĐANG PHÁT SÓNG + NÚT ĐIỀU KHIỂN & MÀU VIỀN (6 COLUMNS) -->
+          <!-- LỚP TRÁI: NHẬP ĐỀ EXCEL + Ô CHỮ HIỆN TẠI + NÚT ĐIỀU KHIỂN & MÀU VIỀN (6 COLUMNS) -->
           <div class="lg:col-span-6 space-y-1.5">
             <!-- ĐỀ THI & Ô CHỮ ĐANG PHÁT SÓNG -->
             <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm">
               <div class="flex items-center justify-between mb-1 pb-1 border-b border-slate-800">
                 <h3 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                  <span>NHẬP ĐỀ & Ô CHỮ HIỆN TẠI</span>
+                  <span>NHẬP ĐỀ & THIẾT LẬP THỦ CÔNG</span>
                 </h3>
                 <div class="flex items-center gap-1.5">
                   <span id="currentRoundBadgeInCard" class="text-[10px] text-amber-400 px-1.5 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
@@ -494,26 +613,14 @@
               </div>
             </section>
 
-            <!-- ĐIỀU KHIỂN Ô CHỮ & MÀU VIỀN -->
+            <!-- CÁC NÚT ĐIỀU KHIỂN & MÀU VIỀN -->
             <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm space-y-1.5">
               <div class="flex items-center justify-between pb-0.5 border-b border-slate-800">
-                <h3 class="text-xs font-bold text-slate-200">ĐIỀU KHIỂN Ô CHỮ</h3>
-                <div class="text-[10px] text-slate-400" id="puzzleBoardStatusText">
-                  Trạng thái: <span class="font-bold text-amber-300" id="boardStateLabel">Chưa hiển thị</span>
-                </div>
+                <h3 class="text-xs font-bold text-slate-200">ĐIỀU KHIỂN NÂNG CAO</h3>
               </div>
 
-              <!-- Các nút hành động ô chữ -->
+              <!-- Các nút hành động ô chữ phụ -->
               <div class="flex flex-wrap items-center gap-1">
-                <button onclick="puzzleAction('show')" class="btn-action px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-bold shadow">
-                  Hiện ô chữ
-                </button>
-                <button onclick="puzzleAction('solve')" class="btn-action px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold shadow">
-                  Giải ô chữ
-                </button>
-                <button onclick="puzzleAction('reset')" class="btn-action px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[11px]">
-                  Reset trống
-                </button>
                 <button onclick="puzzleAction('start_reveal')" class="btn-action px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-[11px] font-bold shadow">
                   Bắt đầu hiện
                 </button>
@@ -523,7 +630,6 @@
                 <button onclick="puzzleAction('resume_reveal')" class="btn-action px-2.5 py-1 bg-cyan-700 hover:bg-cyan-600 text-white rounded text-[11px] font-bold shadow">
                   Tiếp tục hiện
                 </button>
-
                 <button id="btnToggleCategory" onclick="toggleCategoryVisibility()" class="btn-action px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-[11px] font-bold shadow">
                   Chủ đề: <span id="categoryStatusLabel">Hiện</span>
                 </button>
@@ -659,58 +765,8 @@
         </div>
       </div><!-- /tabPuzzle -->
 
-      <!-- TAB 2: VÒNG CHƠI & NÓN (THIẾT KẾ COMPACT VỪA KHUNG HÌNH) -->
+      <!-- TAB 2: ĐIỀU KHIỂN NÓN (THIẾT KẾ COMPACT VỪA KHUNG HÌNH) -->
       <div id="tabWheel" class="tab-content hidden space-y-1.5">
-        <!-- VÒNG CHƠI (CÁC NÚT VÒNG CHƠI - 12 NÚT XẮP TRÊN 1 HÀNG) -->
-        <section class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 shadow-sm">
-          <div class="flex items-center justify-between mb-1 pb-0.5 border-b border-slate-800">
-            <h2 class="text-xs font-bold text-slate-200">MỤC VÒNG CHƠI</h2>
-            <div class="text-[10px]">
-              Vòng hiện tại: <span id="currentRoundDisplay" class="font-extrabold text-amber-400 text-xs px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">Vòng 1</span>
-            </div>
-          </div>
-
-          <!-- 12 Nút Vòng Chơi -->
-          <div class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-1">
-            <button onclick="triggerRoundClick('Đoán nhanh 1')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              Đoán nhanh 1
-            </button>
-            <button onclick="triggerRoundClick('Đoán nhanh 2')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              Đoán nhanh 2
-            </button>
-            <button onclick="triggerRoundClick('Vòng 1')" class="round-btn btn-action py-1 px-1 bg-indigo-600 border border-indigo-400 text-white rounded text-[10px] font-bold text-center">
-              Vòng 1
-            </button>
-            <button onclick="triggerRoundClick('Vòng 2')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              Vòng 2
-            </button>
-            <button onclick="triggerRoundClick('Vòng 3')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              Vòng 3
-            </button>
-            <button onclick="triggerRoundClick('Đoán nhanh 3')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              Đoán nhanh 3
-            </button>
-            <button onclick="triggerRoundClick('ĐNLH 1')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              ĐNLH 1
-            </button>
-            <button onclick="triggerRoundClick('ĐNLH 2')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              ĐNLH 2
-            </button>
-            <button onclick="triggerRoundClick('ĐNLH 3')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              ĐNLH 3
-            </button>
-            <button onclick="triggerRoundClick('Vòng 4')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              Vòng 4
-            </button>
-            <button onclick="triggerRoundClick('Vòng khán giả')" class="round-btn btn-action py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold text-center">
-              Vòng khán giả
-            </button>
-            <button onclick="triggerRoundClick('Vòng đặc biệt')" class="round-btn btn-action py-1 px-1 bg-gradient-to-r from-amber-600 to-yellow-500 border border-yellow-400 text-white rounded text-[10px] font-black text-center shadow">
-              Vòng đặc biệt
-            </button>
-          </div>
-        </section>
-
         <!-- KHUNG CHÍNH TAB 2: CHỌN NÓN & ĐIỀU KHIỂN (LỚP TRÁI) + ẨN HIỆN Ô THẺ (LỚP PHẢI) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-1.5 items-start">
           
@@ -1389,6 +1445,9 @@
         borderBadge.style.borderColor = curColor === '#ffffff' ? '#94a3b8' : curColor;
       }
 
+      // Interactive 4x16 Button Grid
+      renderInteractiveGrid(state);
+
       // Alphabet Keyboard
       renderAlphabet(state.puzzle.revealedLetters || []);
 
@@ -2008,6 +2067,141 @@
     function clearMarkedLetters() {
       socket.emit('puzzle:clear_marked');
       showToast('Đã xóa đánh dấu các ô', 'info');
+    }
+
+    // 4x16 Matrix Helper & Interactive Button Grid Renderer
+    function buildGridMatrix(answer, gridMatrix) {
+      if (gridMatrix && Array.isArray(gridMatrix) && gridMatrix.length === 4) {
+        return gridMatrix.map((row, r) => {
+          return (row || []).slice(0, 16).map((char, c) => ({
+            isLetter: !!(char && char.trim()),
+            char: (char || '').trim().toUpperCase(),
+            index: r * 16 + c
+          }));
+        });
+      }
+
+      const raw = (answer || '').trim().toUpperCase();
+      if (!raw) {
+        return Array.from({ length: 4 }, (_, r) => 
+          Array.from({ length: 16 }, (_, c) => ({ isLetter: false, char: '', index: r * 16 + c }))
+        );
+      }
+
+      const words = raw.split(/\s+/).filter(Boolean);
+      const rows = [[], [], [], []];
+      let curRow = 0;
+      let curLen = 0;
+
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        const need = curLen === 0 ? w.length : curLen + 1 + w.length;
+        if (need <= 16) {
+          if (curLen > 0) rows[curRow].push(' ');
+          for (const ch of w) rows[curRow].push(ch);
+          curLen = need;
+        } else {
+          curRow++;
+          if (curRow >= 4) break;
+          for (const ch of w) rows[curRow].push(ch);
+          curLen = w.length;
+        }
+      }
+
+      const used = rows.filter(r => r.length > 0).length || 1;
+      const startRow = Math.max(0, Math.floor((4 - used) / 2));
+
+      const matrix = Array.from({ length: 4 }, (_, r) => 
+        Array.from({ length: 16 }, (_, c) => ({ isLetter: false, char: '', index: r * 16 + c }))
+      );
+
+      let rIdx = 0;
+      for (let r = 0; r < 4; r++) {
+        if (rows[r].length > 0 && startRow + rIdx < 4) {
+          const targetR = startRow + rIdx;
+          const startC = Math.max(0, Math.floor((16 - rows[r].length) / 2));
+          for (let c = 0; c < rows[r].length; c++) {
+            if (startC + c < 16) {
+              const ch = rows[r][c];
+              if (ch !== ' ') {
+                matrix[targetR][startC + c] = {
+                  isLetter: true,
+                  char: ch,
+                  index: targetR * 16 + (startC + c)
+                };
+              }
+            }
+          }
+          rIdx++;
+        }
+      }
+
+      return matrix;
+    }
+
+    function renderInteractiveGrid(state) {
+      const container = document.getElementById('controllerPuzzleGrid');
+      if (!container) return;
+
+      const roundBadge = document.getElementById('ctrlGridRoundBadge');
+      if (roundBadge) {
+        roundBadge.innerText = (state && state.currentRound) || 'Vòng 1';
+      }
+
+      const answer = (state && state.puzzle && state.puzzle.answer) || '';
+      const gridMatrix = (state && state.puzzle && state.puzzle.gridMatrix) || null;
+      const revealedIndices = (state && state.puzzle && state.puzzle.revealedIndices) || [];
+      const markedIndices = (state && state.puzzle && state.puzzle.markedIndices) || [];
+      const boardState = (state && state.puzzle && state.puzzle.boardState) || 'hidden';
+
+      const matrix = buildGridMatrix(answer, gridMatrix);
+      container.innerHTML = '';
+
+      for (let r = 0; r < 4; r++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.style.display = 'grid';
+        rowDiv.style.gridTemplateColumns = 'repeat(16, minmax(0, 1fr))';
+        rowDiv.style.gap = '3px';
+        rowDiv.className = 'w-full';
+
+        for (let c = 0; c < 16; c++) {
+          const cell = matrix[r][c];
+          const cellIdx = r * 16 + c;
+          const btn = document.createElement('button');
+          btn.id = `ctrl_cell_${cellIdx}`;
+
+          if (cell.isLetter && cell.char) {
+            const isRevealed = (boardState === 'revealed') || revealedIndices.includes(cellIdx);
+            const isMarked = markedIndices.includes(cellIdx);
+
+            btn.innerText = cell.char;
+            btn.onclick = () => onCellClicked(cellIdx);
+
+            if (isRevealed) {
+              btn.className = 'w-full aspect-square rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm border-2 border-emerald-300 shadow-md transition flex items-center justify-center cursor-pointer';
+              btn.title = `Ô [Hàng ${r+1}, Cột ${c+1}]: Chữ "${cell.char}" (ĐÃ MỞ CHO KHÁN GIẢ)`;
+            } else if (isMarked) {
+              btn.className = 'w-full aspect-square rounded bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm border-2 border-blue-400 ring-2 ring-blue-300/80 animate-pulse shadow-md transition flex items-center justify-center cursor-pointer';
+              btn.title = `Ô [Hàng ${r+1}, Cột ${c+1}]: Chữ "${cell.char}" (ĐANG ĐÁNH DẤU - Bấm lần 2 để Mở chữ)`;
+            } else {
+              btn.className = 'w-full aspect-square rounded bg-slate-900 hover:bg-indigo-900/80 text-amber-300 hover:text-amber-200 font-black text-xs sm:text-sm border-2 border-amber-500/70 shadow transition flex items-center justify-center cursor-pointer';
+              btn.title = `Ô [Hàng ${r+1}, Cột ${c+1}]: Chữ "${cell.char}" (CHƯA MỞ - Bấm lần 1 để Đánh dấu)`;
+            }
+          } else {
+            btn.innerText = '';
+            btn.disabled = true;
+            btn.className = 'w-full aspect-square rounded bg-slate-950/60 border border-slate-800/50 opacity-20 cursor-not-allowed pointer-events-none flex items-center justify-center';
+          }
+
+          rowDiv.appendChild(btn);
+        }
+
+        container.appendChild(rowDiv);
+      }
+    }
+
+    function onCellClicked(cellIdx) {
+      socket.emit('puzzle:click_cell', { cellIdx: Number(cellIdx) });
     }
 
     const alphabet = 'AĂÂBCDĐEÊGHIKLMNOÔƠPQRSTUƯVXY'.split('');

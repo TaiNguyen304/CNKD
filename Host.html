@@ -171,17 +171,30 @@
       </div>
 
       <!-- Answer (Đáp án dành cho MC) -->
-      <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex-shrink-0 space-y-1.5">
+      <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex-shrink-0 space-y-2">
         <div class="flex items-center justify-between text-xs">
-          <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">ĐÁP ÁN Ô CHỮ:</span>
-          <span class="text-[11px] text-slate-400">Đã mở: <strong class="text-emerald-400 font-mono" id="revealedCountRatio">0/0</strong></span>
+          <span class="text-[10px] uppercase tracking-wider text-amber-400 font-extrabold flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            ĐÁP ÁN Ô CHỮ DÀNH CHO HOST / MC:
+          </span>
+          <span class="text-[11px] text-slate-300">Đã mở: <strong class="text-emerald-400 font-mono text-xs" id="revealedCountRatio">0/0</strong></span>
         </div>
-        <div class="flex flex-wrap gap-1.5 items-center justify-center min-h-[50px] p-2 bg-slate-900/50 rounded-lg" id="hostAnswerTiles">
+        <div class="flex flex-col gap-1.5 items-center justify-center min-h-[60px] p-2 bg-slate-900/60 rounded-lg border border-slate-800/80" id="hostAnswerTiles">
           <!-- Populated by JS -->
         </div>
-        <div class="flex items-center justify-center gap-4 text-[10px] text-slate-400">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> Khán giả đã thấy</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-800 border border-amber-400 text-amber-300 text-center font-bold text-[8px] leading-2 inline-block">A</span> Chỉ MC thấy</span>
+        <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-[11px] text-slate-300 pt-1 border-t border-slate-800">
+          <span class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded bg-emerald-500 border border-emerald-300 inline-flex items-center justify-center text-[9px] font-black text-slate-950">✓</span>
+            <strong class="text-emerald-400 font-bold">Khán giả đã thấy</strong>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded bg-blue-600 border border-blue-400 inline-flex items-center justify-center text-[9px] font-black text-white">●</span>
+            <strong class="text-blue-400 font-bold">Đang đánh dấu</strong>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded bg-slate-800 border-2 border-amber-400 text-amber-300 inline-flex items-center justify-center text-[9px] font-black">A</span>
+            <strong class="text-amber-300 font-bold">Chỉ MC thấy (Chưa mở)</strong>
+          </span>
         </div>
       </div>
 
@@ -288,7 +301,13 @@
       if (clueEl) clueEl.innerText = state.puzzle.clue || 'Không có gợi ý';
 
       // Answer tiles render for Host
-      renderHostAnswer(state.puzzle.answer || '', state.puzzle.revealedIndices || []);
+      renderHostAnswer(
+        state.puzzle.answer || '',
+        state.puzzle.revealedIndices || [],
+        state.puzzle.gridMatrix || null,
+        state.puzzle.boardState || 'visible',
+        state.puzzle.markedIndices || []
+      );
 
       // 3 Players Table Rows
       state.players.forEach(p => {
@@ -340,40 +359,166 @@
       renderAlphabetTracker(state.puzzle.revealedLetters || []);
     }
 
-    function renderHostAnswer(answer, revealedIndices) {
+    function buildHostMatrix(answer, gridMatrix = null) {
+      const grid = Array.from({ length: 4 }, () =>
+        Array.from({ length: 16 }, () => ({ isLetter: false, char: '', index: -1 }))
+      );
+
+      if (gridMatrix && Array.isArray(gridMatrix) && gridMatrix.length === 4) {
+        let hasLetter = false;
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 16; c++) {
+            const ch = (gridMatrix[r] && gridMatrix[r][c]) ? String(gridMatrix[r][c]).trim() : '';
+            if (ch) {
+              hasLetter = true;
+              grid[r][c] = { isLetter: true, char: ch.toUpperCase(), index: r * 16 + c };
+            } else {
+              grid[r][c] = { isLetter: false, char: '', index: r * 16 + c };
+            }
+          }
+        }
+        if (hasLetter) return grid;
+      }
+
+      if (!answer) return grid;
+
+      const words = answer.trim().split(/\s+/).filter(w => w.length > 0);
+      const rows = [[], [], [], []];
+      let curRow = 0;
+      let curLen = 0;
+
+      for (let w = 0; w < words.length; w++) {
+        const word = words[w];
+        const needed = curLen === 0 ? word.length : word.length + 1;
+
+        if (curLen + needed <= 16) {
+          rows[curRow].push(word);
+          curLen += needed;
+        } else {
+          curRow++;
+          if (curRow >= 4) {
+            curRow = 3;
+            rows[curRow].push(word);
+          } else {
+            rows[curRow].push(word);
+            curLen = word.length;
+          }
+        }
+      }
+
+      const activeRows = rows.filter(r => r.length > 0);
+      const usedCount = activeRows.length;
+      let startRow = 0;
+      if (usedCount === 1 || usedCount === 2) startRow = 1;
+      else if (usedCount === 3) startRow = 0;
+
+      for (let r = 0; r < usedCount; r++) {
+        const targetRowIdx = startRow + r;
+        if (targetRowIdx >= 4) break;
+
+        const rowWords = rows[r];
+        const textInRow = rowWords.join(' ');
+        const leftPad = Math.max(0, Math.floor((16 - textInRow.length) / 2));
+
+        let col = leftPad;
+        for (let w = 0; w < rowWords.length; w++) {
+          const word = rowWords[w];
+          for (let chIdx = 0; chIdx < word.length; chIdx++) {
+            if (col < 16) {
+              grid[targetRowIdx][col] = {
+                isLetter: true,
+                char: word[chIdx].toUpperCase(),
+                index: targetRowIdx * 16 + col
+              };
+              col++;
+            }
+          }
+          if (col < 16 && w < rowWords.length - 1) {
+            grid[targetRowIdx][col] = { isLetter: false, char: '', index: targetRowIdx * 16 + col };
+            col++;
+          }
+        }
+      }
+
+      return grid;
+    }
+
+    function renderHostAnswer(answer, revealedIndices = [], gridMatrix = null, boardState = 'visible', markedIndices = []) {
       const container = document.getElementById('hostAnswerTiles');
       const ratioEl = document.getElementById('revealedCountRatio');
       if (!container) return;
       container.innerHTML = '';
 
-      if (!answer) {
+      if (!answer && !gridMatrix) {
         if (ratioEl) ratioEl.innerText = '0/0';
+        container.innerHTML = '<div class="text-slate-500 text-xs italic py-2">Chưa có ô chữ nào được thiết lập</div>';
         return;
       }
 
-      const chars = answer.toUpperCase().split('');
+      const grid = buildHostMatrix(answer, gridMatrix);
       let totalLetters = 0;
       let totalRevealed = 0;
 
-      chars.forEach((char, index) => {
-        if (char === ' ') {
-          const space = document.createElement('div');
-          space.className = 'w-3 sm:w-4 h-8';
-          container.appendChild(space);
-        } else {
-          totalLetters++;
-          const isRevealed = revealedIndices.includes(index);
-          if (isRevealed) totalRevealed++;
+      // Filter rows that have at least one letter
+      grid.forEach((row, rIdx) => {
+        const rowLetters = row.filter(c => c.isLetter);
+        if (rowLetters.length === 0) return;
 
-          const tile = document.createElement('div');
-          tile.className = `w-7 h-9 sm:w-8 sm:h-11 rounded flex items-center justify-center font-black text-sm sm:text-base shadow ${
-            isRevealed
-              ? 'bg-emerald-500 text-slate-950 ring-1 ring-emerald-300'
-              : 'bg-slate-800 border border-amber-400/50 text-amber-300 opacity-90'
-          }`;
-          tile.innerText = char;
-          container.appendChild(tile);
+        // Find bounds of characters in this row
+        let firstCol = 16, lastCol = -1;
+        row.forEach((cell, cIdx) => {
+          if (cell.isLetter) {
+            if (cIdx < firstCol) firstCol = cIdx;
+            if (cIdx > lastCol) lastCol = cIdx;
+          }
+        });
+
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 w-full';
+
+        for (let cIdx = firstCol; cIdx <= lastCol; cIdx++) {
+          const cell = row[cIdx];
+          const cellIdx = rIdx * 16 + cIdx;
+
+          if (!cell.isLetter) {
+            const space = document.createElement('div');
+            space.className = 'w-3 sm:w-4 h-8';
+            rowDiv.appendChild(space);
+          } else {
+            totalLetters++;
+            const isRevealed = (boardState === 'revealed') || (revealedIndices && revealedIndices.includes(cellIdx));
+            const isMarked = markedIndices && markedIndices.includes(cellIdx);
+
+            if (isRevealed) totalRevealed++;
+
+            const tile = document.createElement('div');
+            if (isRevealed) {
+              // Khán giả đã thấy
+              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex flex-col items-center justify-center font-black text-sm sm:text-base shadow-lg bg-emerald-500 text-slate-950 border-2 border-emerald-300 ring-2 ring-emerald-400/50 relative';
+              tile.innerHTML = `
+                <span>${cell.char}</span>
+                <span class="text-[7px] leading-none uppercase font-extrabold text-slate-900 mt-0.5">ĐÃ THẤY</span>
+              `;
+            } else if (isMarked) {
+              // Đang đánh dấu (Mở lần 1)
+              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex flex-col items-center justify-center font-black text-sm sm:text-base shadow-lg bg-blue-600 text-white border-2 border-blue-400 ring-2 ring-blue-300/60 animate-pulse relative';
+              tile.innerHTML = `
+                <span>${cell.char}</span>
+                <span class="text-[7px] leading-none uppercase font-extrabold text-blue-200 mt-0.5">DẤU</span>
+              `;
+            } else {
+              // Chỉ MC thấy (Chưa mở)
+              tile.className = 'w-7 h-9 sm:w-8 sm:h-11 rounded-lg flex flex-col items-center justify-center font-black text-sm sm:text-base shadow bg-slate-900 border-2 border-amber-400/80 text-amber-300 relative opacity-95';
+              tile.innerHTML = `
+                <span>${cell.char}</span>
+                <span class="text-[7px] leading-none uppercase font-bold text-slate-400 mt-0.5">ẨN</span>
+              `;
+            }
+            rowDiv.appendChild(tile);
+          }
         }
+
+        container.appendChild(rowDiv);
       });
 
       if (ratioEl) ratioEl.innerText = `${totalRevealed}/${totalLetters}`;
